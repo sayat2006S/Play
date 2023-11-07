@@ -1,6 +1,5 @@
 import pygame
 import sys
-import random
 
 pygame.init()
 
@@ -12,6 +11,7 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 DARKGREEN = (0, 100, 0)
+YELLOW = (255, 255, 0)
 
 # Create the game window
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -21,23 +21,45 @@ player = pygame.Rect(100, 100, PLAYER_SIZE, PLAYER_SIZE)
 player_color = WHITE
 player_speed = 1
 
-npc = pygame.Rect(400, 300, PLAYER_SIZE, PLAYER_SIZE)
-npc_color = RED
-npc_speed = 8
+# Define a chest and a key
+chest = pygame.Rect(600, 100, PLAYER_SIZE, PLAYER_SIZE)
+chest_locked = True
 
-obstacles = [pygame.Rect(200, 200, 100, 20), pygame.Rect(600, 400, 20, 150), pygame.Rect(300, 400, 200, 200)]
+# Define the key color and draw it
+key = pygame.Rect(200, 100, 30, 15)
+key_color = (200, 150, 0)
+key_picked_up = False
+
+obstacles= [pygame.Rect(200, 200, 100, 20), 
+            pygame.Rect(600, 400, 20, 150),
+            pygame.Rect(350, 250, 100, 20),
+            pygame.Rect(450, 350, 20, 100),
+            pygame.Rect(100, 450, 200, 20),
+            pygame.Rect(400, 200, 100, 20),
+            pygame.Rect(200, 400, 20, 100),
+            pygame.Rect(550, 450, 200, 20),
+            pygame.Rect(650, 250, 20, 100),
+            pygame.Rect(50, 50, 20, 100),
+            pygame.Rect(100, 200, 20, 100),
+            pygame.Rect(300, 100, 100, 20),
+            pygame.Rect(400, 300, 20, 100),
+            pygame.Rect(550, 150, 20, 100),
+            pygame.Rect(700, 500, 100, 20),
+            pygame.Rect(500, 250, 100, 20),
+            pygame.Rect(250, 400, 20, 100),
+            pygame.Rect(650, 450, 200, 20),
+            pygame.Rect(500, 100, 100, 20),
+            pygame.Rect(450, 200, 20, 100),
+            pygame.Rect(200, 250, 100, 20),
+            pygame.Rect(450, 450, 20, 100),
+            pygame.Rect(350, 150, 100, 20),
+            pygame.Rect(600, 250, 20, 100),
+            pygame.Rect(250, 500, 100, 20),]
 surroundings = [pygame.Rect(0, 0, 800, 800)]
 
-quests = [{
-    'description': 'Defeat the evil monster',
-    'completed': False
-}]
+quests = [{"description": "Open chest", "completed": False}]
 
 font = pygame.font.Font(None, 36)
-
-flash_start_time = None
-flash_duration = 500
-flash_color = None
 
 running = True
 while running:
@@ -55,39 +77,9 @@ while running:
     if keys[pygame.K_DOWN]:
         player.y += player_speed
 
-    # Check for collision with NPC
-    if player.colliderect(npc) and not quests[0]['completed']:
-        flash_start_time = pygame.time.get_ticks()
-        quests[0]['completed'] = True
-
-    # Handle the white flash effect
-    if flash_start_time is not None:
-        current_time = pygame.time.get_ticks()
-        if current_time - flash_start_time < flash_duration:
-            flash_color = WHITE
-        else:
-            flash_start_time = None
-            flash_color = None
-
-    # Move the NPC
-    direction = random.choice(['left', 'right', 'up', 'down'])
-    if direction == 'left':
-        npc.x -= npc_speed
-    elif direction == 'right':
-        npc.x += npc_speed
-    elif direction == 'up':
-        npc.y -= npc_speed
-    elif direction == 'down':
-        npc.y += npc_speed
-
-    # Keep the NPC within the screen boundaries
-    npc.x = max(0, min(npc.x, SCREEN_WIDTH - PLAYER_SIZE))
-    npc.y = max(0, min(npc.y, SCREEN_HEIGHT - PLAYER_SIZE))
-
     # Check for collisions with obstacles
     for obstacle in obstacles:
         if player.colliderect(obstacle):
-            # If there's a collision, adjust the player's position to avoid the obstacle
             if keys[pygame.K_LEFT]:
                 player.x = obstacle.right
             if keys[pygame.K_RIGHT]:
@@ -97,7 +89,7 @@ while running:
             if keys[pygame.K_DOWN]:
                 player.y = obstacle.top - PLAYER_SIZE
 
-    screen.fill((0, 0, 0))  # Clear the screen
+    screen.fill((0, 0, 0))
 
     # Draw surroundings
     for surrounding in surroundings:
@@ -107,18 +99,40 @@ while running:
     for obstacle in obstacles:
         pygame.draw.rect(screen, GREEN, obstacle)
 
-    if flash_color is not None:
-        flash_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-        flash_surface.fill(flash_color)
-        screen.blit(flash_surface, (0, 0))
+    pygame.draw.rect(screen, player_color, player)
 
-    if not quests[0]['completed']:
-        pygame.draw.rect(screen, npc_color, npc)  # Draw the NPC
+    if key and not key_picked_up:
+        pygame.draw.rect(screen, key_color, key)
 
-    pygame.draw.rect(screen, player_color, player)  # Draw the player
+    # Check for collision with the key
+    if key and player.colliderect(key) and not key_picked_up:
+        # If the player collides with the key and it hasn't been picked up,
+        # pick up the key and remove it from the screen
+        key_picked_up = True
+        key = None
 
-    # Display quest status
-    quest_text = "Quest: " + ("Completed" if quests[0]['completed'] else "Defeat the evil monster")
+    # Check for collision with the locked chest
+    if player.colliderect(chest) and chest_locked:
+        if key_picked_up:
+            # If the player has picked up the key, unlock the chest
+            chest_locked = False
+        else:
+            # If the player doesn't have the key, display a message
+            locked_text = "Chest is locked. Find the key to unlock it."
+            text_surface = font.render(locked_text, True, WHITE)
+            screen.blit(text_surface, (20, 60))
+
+    # Draw the chest
+    if not chest_locked:
+        pygame.draw.rect(screen, YELLOW, chest)
+    else:
+        pygame.draw.rect(screen, RED, chest)
+
+    # Display the quest status with the chest information
+    if not quests[0]["completed"]:
+        quest_text = "Quest: " + ("Completed" if not chest_locked else "Open chest")
+    else:
+        quest_text = "Quest: Completed"
     text_surface = font.render(quest_text, True, WHITE)
     screen.blit(text_surface, (20, 20))
 
