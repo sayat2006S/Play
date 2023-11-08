@@ -26,7 +26,7 @@ chest = pygame.Rect(150, 530, PLAYER_SIZE, PLAYER_SIZE)
 chest_locked = True
 
 # Define the key color and draw it
-key = pygame.Rect(250, 400, 30, 15)
+key = pygame.Rect(250, 300, 30, 15)
 key_color = (200, 150, 0)
 key_picked_up = False
 
@@ -35,12 +35,20 @@ obstacles = [pygame.Rect(100, 100, 20, 600),
     pygame.Rect(100, 500, 400, 20),
     pygame.Rect(680, 100, 20, 420),
     pygame.Rect(180, 100, 20, 300),
+    pygame.Rect(500, 300, 20, 100),
     pygame.Rect(500, 100, 20, 100),
-    pygame.Rect(500, 400, 100, 20),
+    pygame.Rect(600, 360, 20, 100),
+    pygame.Rect(500, 280, 100, 20),
+    pygame.Rect(420, 165, 100, 20),
+    pygame.Rect(420, 180, 20, 100),
+    pygame.Rect(600, 200, 20, 100),
     pygame.Rect(600, 400, 20, 100),
+    pygame.Rect(560, 400, 45, 20),
     pygame.Rect(600, 200, 100, 20),
     pygame.Rect(200, 100, 20, 300),
-    pygame.Rect(200, 200, 100, 20),
+    pygame.Rect(180, 250, 100, 20),
+    pygame.Rect(325, 250, 45, 20),
+    pygame.Rect(500, 200, 45, 20),
     pygame.Rect(180, 10, 40, 100),
     pygame.Rect(600, 500, 100, 20),
     pygame.Rect(500, 500, 100, 20),
