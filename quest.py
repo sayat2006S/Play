@@ -1,5 +1,6 @@
 import pygame
 import sys
+import time
 
 pygame.init()
 
@@ -10,6 +11,8 @@ PLAYER_SIZE = 40
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
+LBLUE = (0, 200, 200)
+BLACK = (0,0,0)
 DARKGREEN = (0, 100, 0)
 YELLOW = (255, 255, 0)
 
@@ -26,15 +29,19 @@ chest = pygame.Rect(150, 530, PLAYER_SIZE, PLAYER_SIZE)
 chest_locked = True
 
 # Define the key color and draw it
-key = pygame.Rect(250, 300, 30, 15)
+key = pygame.Rect(225, 320, 25, 15)
 key_color = (200, 150, 0)
 key_picked_up = False
+
+message_display_duration = 2  # Duration to display the message in seconds
+message_start_time = 0  # Initialize the message start time
 
 obstacles = [pygame.Rect(100, 100, 20, 600),
     pygame.Rect(300, 100, 400, 20),
     pygame.Rect(100, 500, 400, 20),
     pygame.Rect(680, 100, 20, 420),
     pygame.Rect(180, 100, 20, 300),
+    pygame.Rect(260, 320, 20, 40),
     pygame.Rect(500, 300, 20, 100),
     pygame.Rect(500, 100, 20, 100),
     pygame.Rect(600, 360, 20, 100),
@@ -64,6 +71,19 @@ obstacles = [pygame.Rect(100, 100, 20, 600),
 surroundings = [pygame.Rect(0, 0, 800, 800)]
 
 quests = [{"description": "Open chest", "completed": False}]
+
+some_trigger_object = pygame.Rect(105, 530, 20, 20)  # Adjust the position and size as needed
+
+# Initialize jumpscare variables
+jumpscare_active = False
+jumpscare_start_time = 0
+jumpscare_duration = 3  # in seconds
+
+new_player_position = (40, 520)  # Adjust the coordinates as needed
+
+jumpscare_image = pygame.image.load("jumpscare.jpg")  # Replace "jumpscare.png" with the actual filename of your image
+jumpscare_size = (800, 600)  # Set the initial size of the jumpscare image
+jumpscare_image = pygame.transform.scale(jumpscare_image, jumpscare_size)
 
 font = pygame.font.Font(None, 36)
 
@@ -121,11 +141,11 @@ while running:
 
     # Draw surroundings
     for surrounding in surroundings:
-        pygame.draw.rect(screen, DARKGREEN, surrounding)
+        pygame.draw.rect(screen, BLACK, surrounding)
 
     # Draw obstacles
     for obstacle in obstacles:
-        pygame.draw.rect(screen, GREEN, obstacle)
+        pygame.draw.rect(screen, LBLUE, obstacle)
 
     pygame.draw.rect(screen, player_color, player)
 
@@ -138,6 +158,17 @@ while running:
         # pick up the key and remove it from the screen
         key_picked_up = True
         key = None
+        message_start_time = time.time()
+    
+    if message_start_time > 0:
+        current_time = time.time()
+        if current_time - message_start_time < message_display_duration:
+            message_text = "Picked up key"
+            text_surface = font.render(message_text, True, WHITE)
+            screen.blit(text_surface, (20, 100))
+        else:
+            # Reset the message start time when the message duration is over
+            message_start_time = 0
 
     # Check for collision with the locked chest
     if player.colliderect(chest) and chest_locked:
@@ -163,6 +194,35 @@ while running:
         quest_text = "Quest: Completed"
     text_surface = font.render(quest_text, True, WHITE)
     screen.blit(text_surface, (20, 20))
+    
+    if player.colliderect(some_trigger_object):
+        jumpscare_active = True
+        jumpscare_start_time = time.time()
+
+    # Check if the jumpscare is starting and exit the game
+    if not jumpscare_active and player.colliderect(some_trigger_object):
+        jumpscare_active = True
+        jumpscare_start_time = time.time()
+        
+    if jumpscare_active:
+        # Display the jumpscare for 3 seconds
+        current_time = time.time()
+        if current_time - jumpscare_start_time < jumpscare_duration:
+            # Draw the jumpscare image on the screen
+            screen.blit(jumpscare_image, (0, 0))
+        else:
+            jumpscare_active = False
+            pygame.quit()
+            sys.exit()
+
+    # Check if the jumpscare is starting and teleport the player
+    if not jumpscare_active and player.colliderect(some_trigger_object):
+        jumpscare_active = True
+        jumpscare_start_time = time.time()
+        player.topleft = new_player_position
+        pygame.quit()
+        sys.exit()
+
 
     pygame.display.update()
 
