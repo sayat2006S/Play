@@ -4,7 +4,6 @@ import time
 
 pygame.init()
 
-# Constants
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 PLAYER_SIZE = 40
@@ -16,7 +15,6 @@ BLACK = (0,0,0)
 DARKGREEN = (0, 100, 0)
 YELLOW = (255, 255, 0)
 
-# Create the game window
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("2D Quest Game")
 
@@ -24,17 +22,29 @@ player = pygame.Rect(40, 520, PLAYER_SIZE, PLAYER_SIZE)
 player_color = WHITE
 player_speed = 1
 
-# Define a chest and a key
 chest = pygame.Rect(150, 530, PLAYER_SIZE, PLAYER_SIZE)
 chest_locked = True
 
-# Define the key color and draw it
+chest2 = pygame.Rect(630, 230, PLAYER_SIZE, PLAYER_SIZE)
+chest2_locked = True
+
+chest3 = pygame.Rect(450, 122, PLAYER_SIZE, PLAYER_SIZE)
+chest3_locked = True
+
 key = pygame.Rect(225, 320, 25, 15)
 key_color = (200, 150, 0)
 key_picked_up = False
 
-message_display_duration = 2  # Duration to display the message in seconds
-message_start_time = 0  # Initialize the message start time
+key2 = pygame.Rect(200, 550, 25, 15)
+key2_color = (0, 255, 0)
+key2_picked_up = False
+
+key3 = pygame.Rect(650, 145, 25, 15)
+key3_color = (0, 0, 255)
+key3_picked_up = False
+
+message_display_duration = 2 
+message_start_time = 0  
 
 obstacles = [pygame.Rect(100, 100, 20, 600),
     pygame.Rect(300, 100, 400, 20),
@@ -60,32 +70,32 @@ obstacles = [pygame.Rect(100, 100, 20, 600),
     pygame.Rect(600, 500, 100, 20),
     pygame.Rect(500, 500, 100, 20),
     pygame.Rect(350, 250, 20, 100),
-    pygame.Rect(200, 350, 200, 30),
+    pygame.Rect(200, 350, 200, 50),
     pygame.Rect(350, 300, 20, 100),
     pygame.Rect(350, 100, 20, 100),
-    pygame.Rect(200, 450, 200, 50),
+    pygame.Rect(440, 260, 10, 20),
+    pygame.Rect(515, 180, 30, 20),
+    #pygame.Rect(500, 470, 20, 40),
+    pygame.Rect(610, 280, 30, 20),
+    pygame.Rect(240, 440, 160, 20),
+    pygame.Rect(240, 450, 20, 70),
+    pygame.Rect(180, 380, 20, 80),
+    pygame.Rect(440, 450, 20, 70),
     pygame.Rect(0, 0, SCREEN_WIDTH, 20),
     pygame.Rect(0, SCREEN_HEIGHT - 20, SCREEN_WIDTH, 20),
     pygame.Rect(0, 0, 20, SCREEN_HEIGHT),
     pygame.Rect(SCREEN_WIDTH - 20, 0, 20, SCREEN_HEIGHT),]
 surroundings = [pygame.Rect(0, 0, 800, 800)]
 
-quests = [{"description": "Open chest", "completed": False}]
-
-some_trigger_object = pygame.Rect(105, 530, 20, 20)  # Adjust the position and size as needed
-
-# Initialize jumpscare variables
-jumpscare_active = False
-jumpscare_start_time = 0
-jumpscare_duration = 3  # in seconds
-
-new_player_position = (40, 520)  # Adjust the coordinates as needed
-
-jumpscare_image = pygame.image.load("jumpscare.jpg")  # Replace "jumpscare.png" with the actual filename of your image
-jumpscare_size = (800, 600)  # Set the initial size of the jumpscare image
-jumpscare_image = pygame.transform.scale(jumpscare_image, jumpscare_size)
+quests = [
+    {"description": "Unlock all chests", "completed": False},
+]
 
 font = pygame.font.Font(None, 36)
+
+def check_quest_completion():
+    if not chest_locked and not chest2_locked and not chest3_locked:
+        quests[0]["completed"] = True
 
 running = True
 while running:
@@ -95,7 +105,6 @@ while running:
 
     keys = pygame.key.get_pressed()
 
-    # Calculate the new position based on player's input
     new_x = player.x
     new_y = player.y
 
@@ -108,24 +117,32 @@ while running:
     if keys[pygame.K_DOWN]:
         new_y += player_speed
 
-    # Create a new Rect representing the player's potential new position
     new_player_rect = pygame.Rect(new_x, new_y, PLAYER_SIZE, PLAYER_SIZE)
 
-    # Check for collisions with obstacles
     collision = False
     for obstacle in obstacles:
         if new_player_rect.colliderect(obstacle):
             collision = True
+            if obstacle == key and not key_picked_up:
+                collision = True
+            elif obstacle == key2 and not key2_picked_up:
+                collision = True
+            elif obstacle == key3 and not key3_picked_up:
+                collision = True
+            elif obstacle == chest and chest_locked:
+                collision = True
+            elif obstacle == chest2 and chest2_locked:
+                collision = True
+            elif obstacle == chest3 and chest3_locked:
+                collision = True
             break
 
-    # Only update the player's position if there's no collision
     if not collision:
         player.x = new_x
         player.y = new_y
 
     screen.fill((0, 0, 0))
 
-    # Check for collisions with obstacles
     for obstacle in obstacles:
         if player.colliderect(obstacle):
             if keys[pygame.K_LEFT]:
@@ -136,14 +153,11 @@ while running:
                 player.y = obstacle.bottom
             if keys[pygame.K_DOWN]:
                 player.y = obstacle.top - PLAYER_SIZE
-
     screen.fill((0, 0, 0))
 
-    # Draw surroundings
     for surrounding in surroundings:
         pygame.draw.rect(screen, BLACK, surrounding)
 
-    # Draw obstacles
     for obstacle in obstacles:
         pygame.draw.rect(screen, LBLUE, obstacle)
 
@@ -152,12 +166,25 @@ while running:
     if key and not key_picked_up:
         pygame.draw.rect(screen, key_color, key)
 
-    # Check for collision with the key
     if key and player.colliderect(key) and not key_picked_up:
-        # If the player collides with the key and it hasn't been picked up,
-        # pick up the key and remove it from the screen
         key_picked_up = True
         key = None
+        message_start_time = time.time()
+
+    if key2 and not key2_picked_up:
+        pygame.draw.rect(screen, key2_color, key2)
+
+    if key2 and player.colliderect(key2) and not key2_picked_up:
+        key2_picked_up = True
+        key2 = None
+        message_start_time = time.time()
+
+    if key3 and not key3_picked_up:
+        pygame.draw.rect(screen, key3_color, key3)
+
+    if key3 and player.colliderect(key3) and not key3_picked_up:
+        key3_picked_up = True
+        key3 = None
         message_start_time = time.time()
     
     if message_start_time > 0:
@@ -167,62 +194,57 @@ while running:
             text_surface = font.render(message_text, True, WHITE)
             screen.blit(text_surface, (20, 100))
         else:
-            # Reset the message start time when the message duration is over
             message_start_time = 0
 
-    # Check for collision with the locked chest
     if player.colliderect(chest) and chest_locked:
         if key_picked_up:
-            # If the player has picked up the key, unlock the chest
             chest_locked = False
+            check_quest_completion()
         else:
-            # If the player doesn't have the key, display a message
-            locked_text = "Chest is locked. Find the key to unlock it."
+            locked_text = "Chest is locked. Find the ORANGE key to unlock it."
             text_surface = font.render(locked_text, True, WHITE)
             screen.blit(text_surface, (20, 60))
 
-    # Draw the chest
+    if player.colliderect(chest2) and chest2_locked:
+        if key2_picked_up:
+            chest2_locked = False
+            check_quest_completion()
+        else:
+            locked_text = "Chest is locked. Find the GREEN key to unlock it."
+            text_surface = font.render(locked_text, True, WHITE)
+            screen.blit(text_surface, (20, 60))
+
+    if player.colliderect(chest3) and chest3_locked:
+        if key3_picked_up:
+            chest3_locked = False
+            check_quest_completion()
+        else:
+            locked_text = "Chest is locked. Find the BLUE key to unlock it."
+            text_surface = font.render(locked_text, True, WHITE)
+            screen.blit(text_surface, (20, 60))
+
+
     if not chest_locked:
-        pygame.draw.rect(screen, YELLOW, chest)
+        pygame.draw.rect(screen, key_color, chest)
     else:
         pygame.draw.rect(screen, RED, chest)
+        
+    if not chest2_locked:
+        pygame.draw.rect(screen, key2_color, chest2)
+    else:
+        pygame.draw.rect(screen, RED, chest2)
 
-    # Display the quest status with the chest information
+    if not chest3_locked:
+        pygame.draw.rect(screen, key3_color, chest3)
+    else:
+        pygame.draw.rect(screen, RED, chest3)
+
     if not quests[0]["completed"]:
-        quest_text = "Quest: " + ("Completed" if not chest_locked else "Open chest")
+        quest_text = "Quest: " + ("Completed" if all([not chest_locked, not chest2_locked, not chest3_locked]) else "Unlock all chests")
     else:
         quest_text = "Quest: Completed"
     text_surface = font.render(quest_text, True, WHITE)
     screen.blit(text_surface, (20, 20))
-    
-    if player.colliderect(some_trigger_object):
-        jumpscare_active = True
-        jumpscare_start_time = time.time()
-
-    # Check if the jumpscare is starting and exit the game
-    if not jumpscare_active and player.colliderect(some_trigger_object):
-        jumpscare_active = True
-        jumpscare_start_time = time.time()
-        
-    if jumpscare_active:
-        # Display the jumpscare for 3 seconds
-        current_time = time.time()
-        if current_time - jumpscare_start_time < jumpscare_duration:
-            # Draw the jumpscare image on the screen
-            screen.blit(jumpscare_image, (0, 0))
-        else:
-            jumpscare_active = False
-            pygame.quit()
-            sys.exit()
-
-    # Check if the jumpscare is starting and teleport the player
-    if not jumpscare_active and player.colliderect(some_trigger_object):
-        jumpscare_active = True
-        jumpscare_start_time = time.time()
-        player.topleft = new_player_position
-        pygame.quit()
-        sys.exit()
-
 
     pygame.display.update()
 
