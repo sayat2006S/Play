@@ -1,32 +1,51 @@
 import pygame
 import sys
 import time
+import math
 
 pygame.init()
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 PLAYER_SIZE = 40
-WHITE = (255, 255, 255)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
-LBLUE = (0, 200, 200)
-BLACK = (0,0,0)
+DOOM_GRAY = (64, 64, 64)
+DOOM_RED = (255, 0, 0)
+DOOM_GREEN = (0, 255, 0)
+DOOM_BLUE = (0, 0, 255)
+DOOM_YELLOW = (255, 255, 0)
+DOOM_BROWN = (139, 69, 19)
+DOOM_DARKGRAY = (32, 32, 32)
+DOOM_BLACK = (0, 0, 0)
+DOOM_WHITE = (255, 255, 255)
 DARKGREEN = (0, 100, 0)
-YELLOW = (255, 255, 0)
+player_color = DOOM_WHITE
+key_color = DOOM_YELLOW
+key2_color = DOOM_GREEN
+key3_color = DOOM_BLUE
+exit_color = DOOM_GREEN
+LBLUE = DOOM_DARKGRAY
+RED = DOOM_RED
+GREEN = DOOM_GREEN
+BLACK = DOOM_BLACK
+WHITE = DOOM_WHITE
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("2D Quest Game")
 
+reverse_controls = False
+
 def start_menu():
     menu_font = pygame.font.Font(None, 48)
-
     title_text = menu_font.render("2D Quest Game", True, WHITE)
     play_text = menu_font.render("Play", True, WHITE)
+    modifiers_text = menu_font.render("Modifiers", True, WHITE)
 
     screen.fill(BLACK)
+    pygame.draw.rect(screen, LBLUE, (SCREEN_WIDTH // 2 - 60, SCREEN_HEIGHT // 2 + 40, 120, 50))  # Play button background
+    pygame.draw.rect(screen, LBLUE, (SCREEN_WIDTH // 2 - 80, SCREEN_HEIGHT // 2 + 120, 160, 50))  # Modifiers button background
     screen.blit(title_text, (SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 50))
-    screen.blit(play_text, (SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 + 50))
+    screen.blit(play_text, (SCREEN_WIDTH // 2 - 35, SCREEN_HEIGHT // 2 + 50))
+    screen.blit(modifiers_text, (SCREEN_WIDTH // 2 - 70, SCREEN_HEIGHT // 2 + 130))
     pygame.display.flip()
 
     waiting_for_input = True
@@ -38,14 +57,68 @@ def start_menu():
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_x, mouse_y = pygame.mouse.get_pos()
-                play_button_rect = pygame.Rect(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 + 50, 100, 40)
-
+                play_button_rect = pygame.Rect(SCREEN_WIDTH // 2 - 60, SCREEN_HEIGHT // 2 + 40, 120, 50)
+                modifiers_button_rect = pygame.Rect(SCREEN_WIDTH // 2 - 80, SCREEN_HEIGHT // 2 + 120, 160, 50)
                 if play_button_rect.collidepoint(mouse_x, mouse_y):
                     waiting_for_input = False
+                elif modifiers_button_rect.collidepoint(mouse_x, mouse_y):
+                    show_modifiers_menu()
 
 player = pygame.Rect(40, 520, PLAYER_SIZE, PLAYER_SIZE)
 player_color = WHITE
 player_speed = 1
+player_health = 200
+MAX_PLAYER_HEALTH = 200
+player_health = MAX_PLAYER_HEALTH  # Set the initial player health to the maximum value
+
+class Turret:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.width = 40
+        self.height = 40
+        self.color = DOOM_GRAY
+        self.rotation_speed = 0.1  # Adjust the rotation speed as needed
+        self.projectiles = []
+        self.shoot_delay = 500  # Adjust the delay between shots as needed
+        self.last_shot_time = 0
+        self.rotation = 0  # Initialize the rotation attribute
+
+    def rotate(self):
+        # Rotate the turret
+        self.rotation += self.rotation_speed
+        if self.rotation >= 360:
+            self.rotation -= 360
+
+    def shoot(self):
+        # Create a projectile and add it to the list
+        if pygame.time.get_ticks() - self.last_shot_time > self.shoot_delay:
+            projectile = Projectile(self.x + self.width / 2, self.y + self.height / 2, self.rotation)
+            self.projectiles.append(projectile)
+            self.last_shot_time = pygame.time.get_ticks()
+
+    def update(self):
+        self.rotate()
+        self.shoot()
+        
+    def reset(self):
+        self.x = 400
+        self.y = 300
+        self.projectiles = []
+        self.last_shot_time = 0
+        self.rotation = 0
+
+class Projectile:
+    def __init__(self, x, y, rotation):
+        self.x = x
+        self.y = y
+        self.speed = 0.1  # Adjust the projectile speed as needed
+        self.rotation = rotation
+
+    def update(self):
+        # Move the projectile in the direction of its rotation
+        self.x += self.speed * math.cos(math.radians(self.rotation))
+        self.y -= self.speed * math.sin(math.radians(self.rotation))
 
 chest = pygame.Rect(150, 530, PLAYER_SIZE, PLAYER_SIZE)
 chest_locked = True
@@ -67,6 +140,8 @@ key2_picked_up = False
 key3 = pygame.Rect(650, 145, 25, 15)
 key3_color = (0, 0, 255)
 key3_picked_up = False
+
+turret = Turret(400, 300)
 
 message_display_duration = 2 
 message_start_time = 0  
@@ -122,19 +197,120 @@ quests = [
 
 font = pygame.font.Font(None, 36)
 
+def show_health_bar():
+    health_bar_rect = pygame.Rect(590, SCREEN_HEIGHT - 15, player_health, 20)
+    pygame.draw.rect(screen, DARKGREEN, health_bar_rect)
+
+def decrease_health(amount):
+    global player_health
+    player_health = max(0, player_health - amount)
+
+def increase_health(amount):
+    global player_health
+    player_health = min(MAX_PLAYER_HEALTH, player_health + amount)
+
 def check_quest_completion():
     if not chest_locked and not chest2_locked and not chest3_locked:
         quests[0]["completed"] = True
         
+def show_modifiers_menu():
+    global reverse_controls
+
+    modifiers_menu_font = pygame.font.Font(None, 36)
+    reverse_controls_text = modifiers_menu_font.render(f"Reverse Controls: {'On' if reverse_controls else 'Off'}", True, WHITE)
+    back_text = modifiers_menu_font.render("Back", True, WHITE)
+
+    modifiers_menu_rects = {
+        "reverse_controls": pygame.Rect(SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT // 2 - 50, 240, 40),
+        "back": pygame.Rect(SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 90, 80, 40),
+    }
+
+    modifiers_menu = True
+
+    while modifiers_menu:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+
+                if modifiers_menu_rects["reverse_controls"].collidepoint(mouse_x, mouse_y):
+                    reverse_controls = not reverse_controls
+
+                elif modifiers_menu_rects["back"].collidepoint(mouse_x, mouse_y):
+                    modifiers_menu = False
+
+        # Render text outside the loop to update it continuously
+        reverse_controls_text = modifiers_menu_font.render(f"Reverse Controls: {'On' if reverse_controls else 'Off'}", True, WHITE)
+
+        screen.fill(BLACK)
+        pygame.draw.rect(screen, LBLUE, modifiers_menu_rects["reverse_controls"])
+        pygame.draw.rect(screen, LBLUE, modifiers_menu_rects["back"])
+        screen.blit(reverse_controls_text, (SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT // 2 - 50))
+        screen.blit(back_text, (SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 90))
+        pygame.display.flip()
+        
+    pygame.time.delay(200)
+        
+def apply_modifiers(keys):
+
+    if reverse_controls:
+        keys[pygame.K_LEFT], keys[pygame.K_RIGHT] = keys[pygame.K_RIGHT], keys[pygame.K_LEFT]
+        keys[pygame.K_UP], keys[pygame.K_DOWN] = keys[pygame.K_DOWN], keys[pygame.K_UP]
+
+    new_x = player.x
+    new_y = player.y
+
+    if keys[pygame.K_LEFT]:
+        new_x -= player_speed
+    if keys[pygame.K_RIGHT]:
+        new_x += player_speed
+    if keys[pygame.K_UP]:
+        new_y -= player_speed
+    if keys[pygame.K_DOWN]:
+        new_y += player_speed
+
+    new_player_rect = pygame.Rect(new_x, new_y, PLAYER_SIZE, PLAYER_SIZE)
+
+    collision = False
+    for obstacle in obstacles:
+        if new_player_rect.colliderect(obstacle):
+            collision = True
+            if obstacle == key and not key_picked_up:
+                collision = True
+            elif obstacle == key2 and not key2_picked_up:
+                collision = True
+            elif obstacle == key3 and not key3_picked_up:
+                collision = True
+            elif obstacle == chest and chest_locked:
+                collision = True
+            elif obstacle == chest2 and chest2_locked:
+                collision = True
+            elif obstacle == chest3 and chest3_locked:
+                collision = True
+            break
+
+    for obstacle in obstacles:
+        if player.colliderect(obstacle):
+            game_over = True
+
+    if not collision:
+        player.x = new_x
+        player.y = new_y
+
 def reset_game():
-    global player, player_color, player_speed, chest_locked, chest2_locked, chest3_locked
+    global player, player_color, player_speed, chest_locked, chest2_locked, chest3_locked, player_health
     global key, key_color, key_picked_up, key2, key2_color, key2_picked_up, key3, key3_color, key3_picked_up
     global exit_unlocked, game_over
+    
+    turret.reset()
 
     # Reset player position and status
     player = pygame.Rect(40, 520, PLAYER_SIZE, PLAYER_SIZE)
     player_color = WHITE
     player_speed = 1
+    player_health = MAX_PLAYER_HEALTH
 
     # Reset chest and key status
     chest_locked = True
@@ -204,14 +380,24 @@ while running and not game_over:
     new_x = player.x
     new_y = player.y
 
-    if keys[pygame.K_LEFT]:
-        new_x -= player_speed
-    if keys[pygame.K_RIGHT]:
-        new_x += player_speed
-    if keys[pygame.K_UP]:
-        new_y -= player_speed
-    if keys[pygame.K_DOWN]:
-        new_y += player_speed
+    if reverse_controls:
+        if keys[pygame.K_LEFT]:
+            new_x += player_speed
+        if keys[pygame.K_RIGHT]:
+            new_x -= player_speed
+        if keys[pygame.K_UP]:
+            new_y += player_speed
+        if keys[pygame.K_DOWN]:
+            new_y -= player_speed
+    else:
+        if keys[pygame.K_LEFT]:
+            new_x -= player_speed 
+        if keys[pygame.K_RIGHT]:
+            new_x += player_speed
+        if keys[pygame.K_UP]:
+            new_y -= player_speed
+        if keys[pygame.K_DOWN]:
+            new_y += player_speed
 
     new_player_rect = pygame.Rect(new_x, new_y, PLAYER_SIZE, PLAYER_SIZE)
 
@@ -366,8 +552,28 @@ while running and not game_over:
         quest_text = "Quest: Completed"
     text_surface = font.render(quest_text, True, WHITE)
     screen.blit(text_surface, (20, 20))
+    
+    show_health_bar()
+    
+    turret.update()
+    for projectile in turret.projectiles:
+        projectile.update()
+        pygame.draw.rect(screen, DOOM_WHITE, (projectile.x, projectile.y, 5, 5))  # Adjust projectile size as needed
 
-    pygame.display.update()
+    pygame.draw.rect(screen, turret.color, (turret.x, turret.y, turret.width, turret.height))
+    pygame.draw.line(screen, DOOM_WHITE, (turret.x + turret.width / 2, turret.y + turret.height / 2),
+                     (turret.x + turret.width / 2 + 30 * math.cos(math.radians(turret.rotation)),
+                      turret.y + turret.height / 2 - 30 * math.sin(math.radians(turret.rotation))))
+
+    # Check for collisions with the player and handle health decrement
+    for projectile in turret.projectiles:
+        projectile_rect = pygame.Rect(projectile.x, projectile.y, 5, 5)
+        if player.colliderect(projectile_rect):
+            decrease_health(50)
+            turret.projectiles.remove(projectile)
+            if player_health <= 0:
+                reset_game()  # Reset the game state
+                start_menu()  # Display the start menu
     
     if not victory_screen_displayed:
         pygame.display.update()
@@ -391,7 +597,7 @@ while running and not game_over:
                     game_over = False
                     victory_screen_displayed = False
                     start_menu()  # You may want to add a function to display a start menu
-        
+            
     pygame.display.update()
 
 pygame.quit()
