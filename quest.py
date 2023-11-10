@@ -1,6 +1,7 @@
 import pygame
 import sys
 import time
+import random
 
 pygame.init()
 
@@ -42,6 +43,11 @@ key2_picked_up = False
 key3 = pygame.Rect(650, 145, 25, 15)
 key3_color = (0, 0, 255)
 key3_picked_up = False
+
+npc_size = 30
+npc = pygame.Rect(400, 300, npc_size, npc_size)
+npc_color = (255, 0, 0)
+npc_speed = 0.5  # Adjust this to control the NPC's speed
 
 message_display_duration = 2 
 message_start_time = 0  
@@ -101,8 +107,9 @@ def check_quest_completion():
     if not chest_locked and not chest2_locked and not chest3_locked:
         quests[0]["completed"] = True
 
+game_over = False
 running = True
-while running:
+while running and not game_over:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -140,6 +147,10 @@ while running:
             elif obstacle == chest3 and chest3_locked:
                 collision = True
             break
+        
+    for obstacle in obstacles:
+        if player.colliderect(obstacle):
+            game_over = True
 
     if not collision:
         player.x = new_x
@@ -158,6 +169,28 @@ while running:
             if keys[pygame.K_DOWN]:
                 player.y = obstacle.top - PLAYER_SIZE
     screen.fill((0, 0, 0))
+    
+    if npc.x < player.x:
+        npc.x += npc_speed
+    elif npc.x > player.x:
+        npc.x -+ npc_speed
+
+    if npc.y < player.y:
+        npc.y += npc_speed
+    elif npc.y > player.y:
+        npc.y -+ npc_speed
+
+    # Check if NPC touches the player
+    if player.colliderect(npc):
+        game_over = True
+    
+    if game_over:
+        screen.fill(RED)  # You can change this color or add an image for the game over screen
+        game_over_text = "Game Over! Press Q to Quit"
+        text_surface = font.render(game_over_text, True, WHITE)
+        screen.blit(text_surface, (SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 50))
+
+        pygame.display.update()
 
     for surrounding in surroundings:
         pygame.draw.rect(screen, BLACK, surrounding)
@@ -254,6 +287,8 @@ while running:
         if player.colliderect(exit_rect):
             print("Congratulations! You completed the game!")
             running = False  # You can customize this part based on your game's requirements
+        
+    pygame.draw.rect(screen, npc_color, npc)
 
     if not quests[0]["completed"]:
         quest_text = "Quest: " + ("Completed" if all([not chest_locked, not chest2_locked, not chest3_locked]) else "Unlock all chests")
@@ -261,6 +296,16 @@ while running:
         quest_text = "Quest: Completed"
     text_surface = font.render(quest_text, True, WHITE)
     screen.blit(text_surface, (20, 20))
+    
+    while game_over:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                    game_over = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_q:
+                        running = False
+                        game_over = False
 
     pygame.display.update()
 
