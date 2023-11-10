@@ -87,6 +87,10 @@ obstacles = [pygame.Rect(100, 100, 20, 600),
     pygame.Rect(SCREEN_WIDTH - 20, 0, 20, SCREEN_HEIGHT),]
 surroundings = [pygame.Rect(0, 0, 800, 800)]
 
+exit_rect = pygame.Rect(40, 520, PLAYER_SIZE, PLAYER_SIZE)
+exit_color = GREEN
+exit_unlocked = False
+
 quests = [
     {"description": "Unlock all chests", "completed": False},
 ]
@@ -238,6 +242,18 @@ while running:
         pygame.draw.rect(screen, key3_color, chest3)
     else:
         pygame.draw.rect(screen, RED, chest3)
+        
+    if all([not chest_locked, not chest2_locked, not chest3_locked]):
+        exit_unlocked = True
+
+    # Draw the exit if it's unlocked
+    if exit_unlocked:
+        pygame.draw.rect(screen, exit_color, exit_rect)
+
+        # Check if the player collides with the exit
+        if player.colliderect(exit_rect):
+            print("Congratulations! You completed the game!")
+            running = False  # You can customize this part based on your game's requirements
 
     if not quests[0]["completed"]:
         quest_text = "Quest: " + ("Completed" if all([not chest_locked, not chest2_locked, not chest3_locked]) else "Unlock all chests")
