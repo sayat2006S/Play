@@ -33,6 +33,9 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("2D Quest Game")
 
 reverse_controls = False
+timer_enabled = False
+elapsed_time = 0
+turret_enabled = False
 
 def start_menu():
     menu_font = pygame.font.Font(None, 48)
@@ -73,33 +76,34 @@ player_health = MAX_PLAYER_HEALTH  # Set the initial player health to the maximu
 
 class Turret:
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
+        self.x = 430
+        self.y = 330
         self.width = 40
         self.height = 40
         self.color = DOOM_GRAY
         self.rotation_speed = 0.1  # Adjust the rotation speed as needed
         self.projectiles = []
-        self.shoot_delay = 500  # Adjust the delay between shots as needed
+        self.shoot_delay = 600  # Adjust the delay between shots as needed
         self.last_shot_time = 0
         self.rotation = 0  # Initialize the rotation attribute
+        self.enabled = True  
 
     def rotate(self):
-        # Rotate the turret
-        self.rotation += self.rotation_speed
-        if self.rotation >= 360:
-            self.rotation -= 360
+        if self.enabled:
+            self.rotation += self.rotation_speed
+            if self.rotation >= 360:
+                self.rotation -= 360
 
     def shoot(self):
-        # Create a projectile and add it to the list
-        if pygame.time.get_ticks() - self.last_shot_time > self.shoot_delay:
+        if self.enabled and pygame.time.get_ticks() - self.last_shot_time > self.shoot_delay:
             projectile = Projectile(self.x + self.width / 2, self.y + self.height / 2, self.rotation)
             self.projectiles.append(projectile)
             self.last_shot_time = pygame.time.get_ticks()
 
     def update(self):
-        self.rotate()
-        self.shoot()
+        if self.enabled:
+            self.rotate()
+            self.shoot()
         
     def reset(self):
         self.x = 400
@@ -112,7 +116,7 @@ class Projectile:
     def __init__(self, x, y, rotation):
         self.x = x
         self.y = y
-        self.speed = 0.1  # Adjust the projectile speed as needed
+        self.speed = 0.2  # Adjust the projectile speed as needed
         self.rotation = rotation
 
     def update(self):
@@ -214,15 +218,19 @@ def check_quest_completion():
         quests[0]["completed"] = True
         
 def show_modifiers_menu():
-    global reverse_controls
+    global reverse_controls, timer_enabled, turret_enabled
 
     modifiers_menu_font = pygame.font.Font(None, 36)
     reverse_controls_text = modifiers_menu_font.render(f"Reverse Controls: {'On' if reverse_controls else 'Off'}", True, WHITE)
+    timer_text = modifiers_menu_font.render(f"Timer: {'On' if timer_enabled else 'Off'}", True, WHITE)
+    turret_text = modifiers_menu_font.render(f"Turret: {'On' if turret_enabled else 'Off'}", True, WHITE)  # Add turret text
     back_text = modifiers_menu_font.render("Back", True, WHITE)
 
     modifiers_menu_rects = {
         "reverse_controls": pygame.Rect(SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT // 2 - 50, 240, 40),
-        "back": pygame.Rect(SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 90, 80, 40),
+        "timer": pygame.Rect(SCREEN_WIDTH // 2 - 80, SCREEN_HEIGHT // 2 + 20, 160, 40),
+        "turret": pygame.Rect(SCREEN_WIDTH // 2 - 80, SCREEN_HEIGHT // 2 + 90, 160, 40),  # Add turret button background
+        "back": pygame.Rect(SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 160, 80, 40),
     }
 
     modifiers_menu = True
@@ -237,20 +245,28 @@ def show_modifiers_menu():
 
                 if modifiers_menu_rects["reverse_controls"].collidepoint(mouse_x, mouse_y):
                     reverse_controls = not reverse_controls
-
+                elif modifiers_menu_rects["timer"].collidepoint(mouse_x, mouse_y):
+                    timer_enabled = not timer_enabled
+                elif modifiers_menu_rects["turret"].collidepoint(mouse_x, mouse_y):  # Check if the turret button is clicked
+                    turret_enabled = not turret_enabled  # Toggle the turret on/off
                 elif modifiers_menu_rects["back"].collidepoint(mouse_x, mouse_y):
                     modifiers_menu = False
 
-        # Render text outside the loop to update it continuously
         reverse_controls_text = modifiers_menu_font.render(f"Reverse Controls: {'On' if reverse_controls else 'Off'}", True, WHITE)
+        timer_text = modifiers_menu_font.render(f"Timer: {'On' if timer_enabled else 'Off'}", True, WHITE)
+        turret_text = modifiers_menu_font.render(f"Turret: {'On' if turret_enabled else 'Off'}", True, WHITE)  # Update turret text
 
         screen.fill(BLACK)
         pygame.draw.rect(screen, LBLUE, modifiers_menu_rects["reverse_controls"])
+        pygame.draw.rect(screen, LBLUE, modifiers_menu_rects["timer"])
+        pygame.draw.rect(screen, LBLUE, modifiers_menu_rects["turret"])  # Draw turret button background
         pygame.draw.rect(screen, LBLUE, modifiers_menu_rects["back"])
         screen.blit(reverse_controls_text, (SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT // 2 - 50))
-        screen.blit(back_text, (SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 90))
+        screen.blit(timer_text, (SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 20))
+        screen.blit(turret_text, (SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 90))  # Display turret text
+        screen.blit(back_text, (SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 160))
         pygame.display.flip()
-        
+
     pygame.time.delay(200)
         
 def apply_modifiers(keys):
@@ -291,10 +307,6 @@ def apply_modifiers(keys):
                 collision = True
             break
 
-    for obstacle in obstacles:
-        if player.colliderect(obstacle):
-            game_over = True
-
     if not collision:
         player.x = new_x
         player.y = new_y
@@ -302,7 +314,7 @@ def apply_modifiers(keys):
 def reset_game():
     global player, player_color, player_speed, chest_locked, chest2_locked, chest3_locked, player_health
     global key, key_color, key_picked_up, key2, key2_color, key2_picked_up, key3, key3_color, key3_picked_up
-    global exit_unlocked, game_over
+    global exit_unlocked, elapsed_time
     
     turret.reset()
 
@@ -331,9 +343,9 @@ def reset_game():
     # Reset exit status
     exit_unlocked = False
 
-    # Reset game over status
-    game_over = False
     quests[0]["completed"] = False
+    
+    elapsed_time = 0
         
 def show_victory_screen():
     victory_font = pygame.font.Font(None, 48)
@@ -362,11 +374,10 @@ def show_victory_screen():
         
 start_menu()
 
-game_over = False
 victory_screen_displayed = False
 running = True
 show_start_menu = True
-while running and not game_over:
+while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -374,8 +385,12 @@ while running and not game_over:
     if show_start_menu:
         start_menu()
         show_start_menu = False
+        
+    if timer_enabled:
+        elapsed_time += pygame.time.get_ticks() / 1000
 
     keys = pygame.key.get_pressed()
+    apply_modifiers(keys)
 
     new_x = player.x
     new_y = player.y
@@ -419,10 +434,6 @@ while running and not game_over:
                 collision = True
             break
         
-    for obstacle in obstacles:
-        if player.colliderect(obstacle):
-            game_over = True
-
     if not collision:
         player.x = new_x
         player.y = new_y
@@ -440,14 +451,6 @@ while running and not game_over:
             if keys[pygame.K_DOWN]:
                 player.y = obstacle.top - PLAYER_SIZE
     screen.fill((0, 0, 0))
-        
-    if game_over:
-        screen.fill(RED)  # You can change this color or add an image for the game over screen
-        game_over_text = "Game Over! Press Q to Quit"
-        text_surface = font.render(game_over_text, True, WHITE)
-        screen.blit(text_surface, (SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 50))
-
-        pygame.display.update()
 
     for surrounding in surroundings:
         pygame.draw.rect(screen, BLACK, surrounding)
@@ -480,15 +483,6 @@ while running and not game_over:
         key3_picked_up = True
         key3 = None
         message_start_time = time.time()
-    
-    if message_start_time > 0:
-        current_time = time.time()
-        if current_time - message_start_time < message_display_duration:
-            message_text = "Picked up key"
-            text_surface = font.render(message_text, True, WHITE)
-            screen.blit(text_surface, (20, 100))
-        else:
-            message_start_time = 0
 
     if player.colliderect(chest) and chest_locked:
         if key_picked_up:
@@ -555,25 +549,31 @@ while running and not game_over:
     
     show_health_bar()
     
-    turret.update()
-    for projectile in turret.projectiles:
-        projectile.update()
-        pygame.draw.rect(screen, DOOM_WHITE, (projectile.x, projectile.y, 5, 5))  # Adjust projectile size as needed
+    if turret_enabled:
+        turret.update()
+        for projectile in turret.projectiles:
+            projectile.update()
+            pygame.draw.rect(screen, DOOM_WHITE, (projectile.x, projectile.y, 5, 5))  # Adjust projectile size as needed
 
-    pygame.draw.rect(screen, turret.color, (turret.x, turret.y, turret.width, turret.height))
-    pygame.draw.line(screen, DOOM_WHITE, (turret.x + turret.width / 2, turret.y + turret.height / 2),
-                     (turret.x + turret.width / 2 + 30 * math.cos(math.radians(turret.rotation)),
-                      turret.y + turret.height / 2 - 30 * math.sin(math.radians(turret.rotation))))
+        pygame.draw.rect(screen, turret.color, (turret.x, turret.y, turret.width, turret.height))
+        pygame.draw.line(screen, DOOM_WHITE, (turret.x + turret.width / 2, turret.y + turret.height / 2),
+                        (turret.x + turret.width / 2 + 30 * math.cos(math.radians(turret.rotation)),
+                        turret.y + turret.height / 2 - 30 * math.sin(math.radians(turret.rotation))))
 
-    # Check for collisions with the player and handle health decrement
-    for projectile in turret.projectiles:
-        projectile_rect = pygame.Rect(projectile.x, projectile.y, 5, 5)
-        if player.colliderect(projectile_rect):
-            decrease_health(50)
-            turret.projectiles.remove(projectile)
-            if player_health <= 0:
-                reset_game()  # Reset the game state
-                start_menu()  # Display the start menu
+        # Check for collisions with the player and handle health decrement
+        for projectile in turret.projectiles:
+            projectile_rect = pygame.Rect(projectile.x, projectile.y, 5, 5)
+            if player.colliderect(projectile_rect):
+                decrease_health(50)
+                turret.projectiles.remove(projectile)
+                if player_health <= 0:
+                    reset_game()  # Reset the game state
+                    start_menu()  # Display the start menu
+                
+    if timer_enabled:
+        timer_font = pygame.font.Font(None, 24)
+        timer_text = timer_font.render(f"Timer: {int(elapsed_time)} seconds", True, WHITE)
+        screen.blit(timer_text, (SCREEN_WIDTH - 200, 20))
     
     if not victory_screen_displayed:
         pygame.display.update()
@@ -581,20 +581,17 @@ while running and not game_over:
         show_victory_screen()
         victory_screen_displayed = False
 
-    while game_over or victory_screen_displayed:
+    while victory_screen_displayed:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-                game_over = False
                 victory_screen_displayed = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_q:
                     running = False
-                    game_over = False
                     victory_screen_displayed = False
                 elif event.key == pygame.K_r:
                     reset_game()
-                    game_over = False
                     victory_screen_displayed = False
                     start_menu()  # You may want to add a function to display a start menu
             
