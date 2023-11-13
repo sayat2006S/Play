@@ -229,7 +229,7 @@ def show_modifiers_menu():
     modifiers_menu_rects = {
         "reverse_controls": pygame.Rect(SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT // 2 - 50, 240, 40),
         "timer": pygame.Rect(SCREEN_WIDTH // 2 - 80, SCREEN_HEIGHT // 2 + 20, 160, 40),
-        "turret": pygame.Rect(SCREEN_WIDTH // 2 - 80, SCREEN_HEIGHT // 2 + 90, 160, 40),  # Add turret button background
+        "turret": pygame.Rect(SCREEN_WIDTH // 2 - 80, SCREEN_HEIGHT // 2 + 90, 160, 40), 
         "back": pygame.Rect(SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 160, 80, 40),
     }
 
@@ -251,6 +251,7 @@ def show_modifiers_menu():
                     turret_enabled = not turret_enabled  # Toggle the turret on/off
                 elif modifiers_menu_rects["back"].collidepoint(mouse_x, mouse_y):
                     modifiers_menu = False
+                return  # Add this line to exit the function
 
         reverse_controls_text = modifiers_menu_font.render(f"Reverse Controls: {'On' if reverse_controls else 'Off'}", True, WHITE)
         timer_text = modifiers_menu_font.render(f"Timer: {'On' if timer_enabled else 'Off'}", True, WHITE)
@@ -347,13 +348,18 @@ def reset_game():
     
     elapsed_time = 0
         
-def show_victory_screen():
+def show_victory_screen(finish_time):
     victory_font = pygame.font.Font(None, 48)
     victory_text = victory_font.render("Congratulations! You Completed the Game!", True, WHITE)
     restart_text = victory_font.render("Press R to Restart or Q to Quit", True, WHITE)
+    
+    if timer_enabled:  # Only display finish time if the timer is enabled
+        finish_time_text = victory_font.render(f"Finish Time: {int(finish_time)} seconds", True, WHITE)
+        screen.blit(finish_time_text, (SCREEN_WIDTH // 2 - 300, SCREEN_HEIGHT // 2 - 50))
 
     screen.fill(GREEN)  # Customize the background color for the victory screen
-    screen.blit(victory_text, (SCREEN_WIDTH // 2 - 400, SCREEN_HEIGHT // 2 - 50))
+    screen.blit(victory_text, (SCREEN_WIDTH // 2 - 400, SCREEN_HEIGHT // 2 - 100))
+    screen.blit(finish_time_text, (SCREEN_WIDTH // 2 - 300, SCREEN_HEIGHT // 2 - 50))
     screen.blit(restart_text, (SCREEN_WIDTH // 2 - 300, SCREEN_HEIGHT // 2 + 50))
     pygame.display.flip()
 
@@ -374,6 +380,7 @@ def show_victory_screen():
         
 start_menu()
 
+finish_time = 0
 victory_screen_displayed = False
 running = True
 show_start_menu = True
@@ -535,9 +542,10 @@ while running:
         pygame.draw.rect(screen, exit_color, exit_rect)
         # Check if the player collides with the exit
         if player.colliderect(exit_rect):
-            show_victory_screen()
+            show_victory_screen(finish_time)
             reset_game()
             show_start_menu = True
+        finish_time = elapsed_time
 
 
     if not quests[0]["completed"]:
@@ -596,6 +604,9 @@ while running:
                     start_menu()  # You may want to add a function to display a start menu
             
     pygame.display.update()
+    
+if finish_time > 0:
+    show_victory_screen(finish_time)
 
 pygame.quit()
 sys.exit()
