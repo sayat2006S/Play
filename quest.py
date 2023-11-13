@@ -127,47 +127,6 @@ class Projectile:
         # Move the projectile in the direction of its rotation
         self.x += self.speed * math.cos(math.radians(self.rotation))
         self.y -= self.speed * math.sin(math.radians(self.rotation))
-        
-class Enemy:
-    def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, PLAYER_SIZE, PLAYER_SIZE)
-        self.color = DARKGREEN
-        self.speed = 1
-        self.projectiles = []
-        self.shoot_delay = 1000  # Adjust the delay between shots as needed
-        self.last_shot_time = 0
-
-    def move_towards_player(self, player_rect):
-        if self.rect.x < player_rect.x:
-            self.rect.x += self.speed
-        elif self.rect.x > player_rect.x:
-            self.rect.x -= self.speed
-
-        if self.rect.y < player_rect.y:
-            self.rect.y += self.speed
-        elif self.rect.y > player_rect.y:
-            self.rect.y -= self.speed
-
-    def shoot(self, player_rect):
-        if pygame.time.get_ticks() - self.last_shot_time > self.shoot_delay:
-            projectile = Projectile(
-                self.rect.x + PLAYER_SIZE / 2,
-                self.rect.y + PLAYER_SIZE / 2,
-                player_rect.x + PLAYER_SIZE / 2,
-                player_rect.y + PLAYER_SIZE / 2
-            )
-            self.projectiles.append(projectile)
-            self.last_shot_time = pygame.time.get_ticks()
-
-    def update(self, player_rect):
-        self.move_towards_player(player_rect)
-        self.shoot()
-        for projectile in self.projectiles:
-            projectile.update()
-
-# Add the Enemy class along with the Projectile class to your existing code
-
-enemies = [Enemy(200, 200), Enemy(400, 200), Enemy(600, 200)]
 
 chest = pygame.Rect(150, 530, PLAYER_SIZE, PLAYER_SIZE)
 chest_locked = True
@@ -618,27 +577,6 @@ while running:
     screen.blit(text_surface, (20, 20))
     
     show_health_bar()
-    
-    for enemy in enemies:
-        enemy.update(player)
-
-    # Check for collisions with the player and handle health decrement
-    for projectile in enemy.projectiles:
-        projectile_rect = pygame.Rect(projectile.x, projectile.y, 5, 5)
-        if player.colliderect(projectile_rect):
-            decrease_health(50)
-            enemy.projectiles.remove(projectile)
-            if player_health <= 0:
-                reset_game()  # Reset the game state
-                start_menu()  # Display the start menu
-                
-    for obstacle in obstacles:
-        if enemy.rect.colliderect(obstacle):
-            enemy.move_towards_player(player)  # Change the movement strategy as needed
-
-    pygame.draw.rect(screen, enemy.color, enemy.rect)
-    for projectile in enemy.projectiles:
-        pygame.draw.rect(screen, DOOM_WHITE, (projectile.x, projectile.y, 5, 5))
     
     if turret_enabled:
         turret.update()
