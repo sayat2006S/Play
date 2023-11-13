@@ -37,6 +37,10 @@ timer_enabled = False
 elapsed_time = 0
 turret_enabled = False
 
+cover_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+cover_color = DOOM_BLACK
+show_cover = False
+
 def start_menu():
     menu_font = pygame.font.Font(None, 48)
     title_text = menu_font.render("2D Quest Game", True, WHITE)
@@ -123,6 +127,47 @@ class Projectile:
         # Move the projectile in the direction of its rotation
         self.x += self.speed * math.cos(math.radians(self.rotation))
         self.y -= self.speed * math.sin(math.radians(self.rotation))
+        
+class Enemy:
+    def __init__(self, x, y):
+        self.rect = pygame.Rect(x, y, PLAYER_SIZE, PLAYER_SIZE)
+        self.color = DARKGREEN
+        self.speed = 1
+        self.projectiles = []
+        self.shoot_delay = 1000  # Adjust the delay between shots as needed
+        self.last_shot_time = 0
+
+    def move_towards_player(self, player_rect):
+        if self.rect.x < player_rect.x:
+            self.rect.x += self.speed
+        elif self.rect.x > player_rect.x:
+            self.rect.x -= self.speed
+
+        if self.rect.y < player_rect.y:
+            self.rect.y += self.speed
+        elif self.rect.y > player_rect.y:
+            self.rect.y -= self.speed
+
+    def shoot(self, player_rect):
+        if pygame.time.get_ticks() - self.last_shot_time > self.shoot_delay:
+            projectile = Projectile(
+                self.rect.x + PLAYER_SIZE / 2,
+                self.rect.y + PLAYER_SIZE / 2,
+                player_rect.x + PLAYER_SIZE / 2,
+                player_rect.y + PLAYER_SIZE / 2
+            )
+            self.projectiles.append(projectile)
+            self.last_shot_time = pygame.time.get_ticks()
+
+    def update(self, player_rect):
+        self.move_towards_player(player_rect)
+        self.shoot()
+        for projectile in self.projectiles:
+            projectile.update()
+
+# Add the Enemy class along with the Projectile class to your existing code
+
+enemies = [Enemy(200, 200), Enemy(400, 200), Enemy(600, 200)]
 
 chest = pygame.Rect(150, 530, PLAYER_SIZE, PLAYER_SIZE)
 chest_locked = True
@@ -218,18 +263,20 @@ def check_quest_completion():
         quests[0]["completed"] = True
         
 def show_modifiers_menu():
-    global reverse_controls, timer_enabled, turret_enabled
+    global reverse_controls, timer_enabled, turret_enabled, show_cover
 
     modifiers_menu_font = pygame.font.Font(None, 36)
     reverse_controls_text = modifiers_menu_font.render(f"Reverse Controls: {'On' if reverse_controls else 'Off'}", True, WHITE)
     timer_text = modifiers_menu_font.render(f"Timer: {'On' if timer_enabled else 'Off'}", True, WHITE)
     turret_text = modifiers_menu_font.render(f"Turret: {'On' if turret_enabled else 'Off'}", True, WHITE)  # Add turret text
+    cover_text = modifiers_menu_font.render(f"Cover: {'On' if show_cover else 'Off'}", True, WHITE)  # Add cover text
     back_text = modifiers_menu_font.render("Back", True, WHITE)
 
     modifiers_menu_rects = {
         "reverse_controls": pygame.Rect(SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT // 2 - 50, 240, 40),
         "timer": pygame.Rect(SCREEN_WIDTH // 2 - 80, SCREEN_HEIGHT // 2 + 20, 160, 40),
-        "turret": pygame.Rect(SCREEN_WIDTH // 2 - 80, SCREEN_HEIGHT // 2 + 90, 160, 40), 
+        "turret": pygame.Rect(SCREEN_WIDTH // 2 - 80, SCREEN_HEIGHT // 2 + 90, 160, 40),
+        "cover": pygame.Rect(SCREEN_WIDTH // 2 - 80, SCREEN_HEIGHT // 2 + 160, 160, 40), 
         "back": pygame.Rect(SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 160, 80, 40),
     }
 
@@ -249,6 +296,8 @@ def show_modifiers_menu():
                     timer_enabled = not timer_enabled
                 elif modifiers_menu_rects["turret"].collidepoint(mouse_x, mouse_y):  # Check if the turret button is clicked
                     turret_enabled = not turret_enabled  # Toggle the turret on/off
+                elif modifiers_menu_rects["cover"].collidepoint(mouse_x, mouse_y):  # Check if the cover button is clicked
+                    show_cover = not show_cover
                 elif modifiers_menu_rects["back"].collidepoint(mouse_x, mouse_y):
                     modifiers_menu = False
                 return  # Add this line to exit the function
@@ -256,15 +305,18 @@ def show_modifiers_menu():
         reverse_controls_text = modifiers_menu_font.render(f"Reverse Controls: {'On' if reverse_controls else 'Off'}", True, WHITE)
         timer_text = modifiers_menu_font.render(f"Timer: {'On' if timer_enabled else 'Off'}", True, WHITE)
         turret_text = modifiers_menu_font.render(f"Turret: {'On' if turret_enabled else 'Off'}", True, WHITE)  # Update turret text
+        cover_text = modifiers_menu_font.render(f"Cover: {'On' if show_cover else 'Off'}", True, WHITE)  # Update cover text
 
         screen.fill(BLACK)
         pygame.draw.rect(screen, LBLUE, modifiers_menu_rects["reverse_controls"])
         pygame.draw.rect(screen, LBLUE, modifiers_menu_rects["timer"])
         pygame.draw.rect(screen, LBLUE, modifiers_menu_rects["turret"])  # Draw turret button background
+        pygame.draw.rect(screen, LBLUE, modifiers_menu_rects["cover"])  # Draw cover button background
         pygame.draw.rect(screen, LBLUE, modifiers_menu_rects["back"])
         screen.blit(reverse_controls_text, (SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT // 2 - 50))
         screen.blit(timer_text, (SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 20))
-        screen.blit(turret_text, (SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 90))  # Display turret text
+        screen.blit(turret_text, (SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 90))
+        screen.blit(cover_text, (SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 160))  # Display cover text
         screen.blit(back_text, (SCREEN_WIDTH // 2 - 40, SCREEN_HEIGHT // 2 + 160))
         pygame.display.flip()
 
@@ -315,7 +367,7 @@ def apply_modifiers(keys):
 def reset_game():
     global player, player_color, player_speed, chest_locked, chest2_locked, chest3_locked, player_health
     global key, key_color, key_picked_up, key2, key2_color, key2_picked_up, key3, key3_color, key3_picked_up
-    global exit_unlocked, elapsed_time
+    global exit_unlocked, elapsed_time, show_cover
     
     turret.reset()
 
@@ -346,6 +398,14 @@ def reset_game():
 
     quests[0]["completed"] = False
     
+    show_cover = show_cover  # Maintain the show_cover state
+
+    # Draw the cover if show_cover is True
+    if show_cover:
+        pygame.draw.rect(screen, cover_color, cover_rect)
+    else:
+        show_cover = False
+    
     elapsed_time = 0
         
 def show_victory_screen(finish_time):
@@ -359,7 +419,6 @@ def show_victory_screen(finish_time):
 
     screen.fill(GREEN)  # Customize the background color for the victory screen
     screen.blit(victory_text, (SCREEN_WIDTH // 2 - 400, SCREEN_HEIGHT // 2 - 100))
-    screen.blit(finish_time_text, (SCREEN_WIDTH // 2 - 300, SCREEN_HEIGHT // 2 - 50))
     screen.blit(restart_text, (SCREEN_WIDTH // 2 - 300, SCREEN_HEIGHT // 2 + 50))
     pygame.display.flip()
 
@@ -464,6 +523,9 @@ while running:
 
     for obstacle in obstacles:
         pygame.draw.rect(screen, LBLUE, obstacle)
+        
+    if show_cover:
+        pygame.draw.rect(screen, cover_color, cover_rect)
 
     pygame.draw.rect(screen, player_color, player)
 
@@ -557,6 +619,27 @@ while running:
     
     show_health_bar()
     
+    for enemy in enemies:
+        enemy.update(player)
+
+    # Check for collisions with the player and handle health decrement
+    for projectile in enemy.projectiles:
+        projectile_rect = pygame.Rect(projectile.x, projectile.y, 5, 5)
+        if player.colliderect(projectile_rect):
+            decrease_health(50)
+            enemy.projectiles.remove(projectile)
+            if player_health <= 0:
+                reset_game()  # Reset the game state
+                start_menu()  # Display the start menu
+                
+    for obstacle in obstacles:
+        if enemy.rect.colliderect(obstacle):
+            enemy.move_towards_player(player)  # Change the movement strategy as needed
+
+    pygame.draw.rect(screen, enemy.color, enemy.rect)
+    for projectile in enemy.projectiles:
+        pygame.draw.rect(screen, DOOM_WHITE, (projectile.x, projectile.y, 5, 5))
+    
     if turret_enabled:
         turret.update()
         for projectile in turret.projectiles:
@@ -577,6 +660,9 @@ while running:
                 if player_health <= 0:
                     reset_game()  # Reset the game state
                     start_menu()  # Display the start menu
+                    
+    if all([not chest_locked, not chest2_locked, not chest3_locked]):
+        show_cover = False
                 
     if timer_enabled:
         timer_font = pygame.font.Font(None, 24)
