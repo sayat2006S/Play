@@ -9,26 +9,22 @@ pygame.init()
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 PLAYER_SIZE = 40
-DOOM_GRAY = (64, 64, 64)
-DOOM_RED = (255, 0, 0)
-DOOM_GREEN = (0, 255, 0)
-DOOM_BLUE = (0, 0, 255)
-DOOM_YELLOW = (255, 255, 0)
-DOOM_BROWN = (139, 69, 19)
-DOOM_DARKGRAY = (32, 32, 32)
-DOOM_BLACK = (0, 0, 0)
-DOOM_WHITE = (255, 255, 255)
+GRAY = (64, 64, 64)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
+BROWN = (139, 69, 19)
+DARKGRAY = (32, 32, 32)
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+LBLUE = (0, 255, 255)
 DARKGREEN = (0, 100, 0)
-player_color = DOOM_WHITE
-key_color = DOOM_YELLOW
-key2_color = DOOM_GREEN
-key3_color = DOOM_BLUE
-exit_color = DOOM_GREEN
-LBLUE = DOOM_DARKGRAY
-RED = DOOM_RED
-GREEN = DOOM_GREEN
-BLACK = DOOM_BLACK
-WHITE = DOOM_WHITE
+player_color = WHITE
+key_color = YELLOW
+key2_color = GREEN
+key3_color = BLUE
+exit_color = GREEN
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("2D Quest Game")
@@ -37,9 +33,10 @@ reverse_controls = False
 timer_enabled = True
 elapsed_time = 0
 turret_enabled = True
+parry_active = False
 
 cover_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
-cover_color = DOOM_BLACK
+cover_color = BLACK
 show_cover = False
 
 def generate_random_coordinates(enabled=True, exclude_rects=[], obstacles=[]):
@@ -61,7 +58,7 @@ def start_menu():
     play_text = menu_font.render("Play", True, WHITE)
 
     screen.fill(BLACK)
-    pygame.draw.rect(screen, LBLUE, (SCREEN_WIDTH // 2 - 60, SCREEN_HEIGHT // 2 + 40, 120, 50))  # Play button background
+    pygame.draw.rect(screen, DARKGRAY, (SCREEN_WIDTH // 2 - 60, SCREEN_HEIGHT // 2 + 40, 120, 50))  # Play button background
     screen.blit(title_text, (SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 50))
     screen.blit(play_text, (SCREEN_WIDTH // 2 - 35, SCREEN_HEIGHT // 2 + 50))
 
@@ -93,7 +90,7 @@ class Turret:
         self.y = 330
         self.width = 40
         self.height = 40
-        self.color = DOOM_GRAY
+        self.color = GRAY
         self.rotation_speed = 0.1  # Adjust the rotation speed as needed
         self.projectiles = []
         self.shoot_delay = 600  # Adjust the delay between shots as needed
@@ -347,6 +344,10 @@ while running:
             new_y -= player_speed
         if keys[pygame.K_DOWN]:
             new_y += player_speed
+        if keys[pygame.K_SPACE]:
+            parry_active = True
+        else:
+            parry_active = False
 
     new_player_rect = pygame.Rect(new_x, new_y, PLAYER_SIZE, PLAYER_SIZE)
 
@@ -390,7 +391,7 @@ while running:
         pygame.draw.rect(screen, BLACK, surrounding)
 
     for obstacle in obstacles:
-        pygame.draw.rect(screen, LBLUE, obstacle)
+        pygame.draw.rect(screen, DARKGRAY, obstacle)
         
     if show_cover:
         pygame.draw.rect(screen, cover_color, cover_rect)
@@ -491,10 +492,10 @@ while running:
         turret.update()
         for projectile in turret.projectiles:
             projectile.update()
-            pygame.draw.rect(screen, DOOM_WHITE, (projectile.x, projectile.y, 5, 5))  # Adjust projectile size as needed
+            pygame.draw.rect(screen, WHITE, (projectile.x, projectile.y, 5, 5))  # Adjust projectile size as needed
 
         pygame.draw.rect(screen, turret.color, (turret.x, turret.y, turret.width, turret.height))
-        pygame.draw.line(screen, DOOM_WHITE, (turret.x + turret.width / 2, turret.y + turret.height / 2),
+        pygame.draw.line(screen, WHITE, (turret.x + turret.width / 2, turret.y + turret.height / 2),
                         (turret.x + turret.width / 2 + 30 * math.cos(math.radians(turret.rotation)),
                         turret.y + turret.height / 2 - 30 * math.sin(math.radians(turret.rotation))))
 
@@ -502,8 +503,12 @@ while running:
         for projectile in turret.projectiles:
             projectile_rect = pygame.Rect(projectile.x, projectile.y, 5, 5)
             if player.colliderect(projectile_rect):
-                decrease_health(50)
-                turret.projectiles.remove(projectile)
+                if parry_active:
+                    # Parry the projectile by changing its direction
+                    projectile.rotation += 180
+                else:
+                    decrease_health(50)
+                    turret.projectiles.remove(projectile)
                 if player_health <= 0:
                     reset_game()  # Reset the game state
                     start_menu()  # Display the start menu
@@ -515,6 +520,11 @@ while running:
         timer_font = pygame.font.Font(None, 24)
         timer_text = timer_font.render(f"Timer: {int(elapsed_time)} seconds", True, WHITE)
         screen.blit(timer_text, (SCREEN_WIDTH - 200, 20))
+        
+    if parry_active:
+        player_color = LBLUE  # Change the color to light blue during parry
+    else:
+        player_color = WHITE
     
     if not victory_screen_displayed:
         pygame.display.update()
