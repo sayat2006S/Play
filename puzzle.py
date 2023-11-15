@@ -1,97 +1,153 @@
 import pygame
 import sys
-import random
 
+# Initialize Pygame
 pygame.init()
 
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
-MAX_LEVELS = 3  # Number of levels
-current_level = 1
-transition_time = 2000  # 2000 milliseconds (2 seconds) for transition
+# Constants
+WIDTH, HEIGHT = 800, 600
+FPS = 60
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+FONT = pygame.font.Font(None, 36)
 
-def generate_solution():
-    return pygame.Rect(random.randint(100, 700), random.randint(100, 500), 20, 20)
-
-def generate_solution_color():
-    return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-
-def fade(surface, width, height, alpha):
-    fade_surface = pygame.Surface((width, height))
-    fade_surface.set_alpha(alpha)
-    fade_surface.fill((0, 0, 0))
-    surface.blit(fade_surface, (0, 0))
-
-SOLUTION_RECT = generate_solution()
-SOLUTION_COLOR = generate_solution_color()
-
-# Define murder mystery clues for Level 1
-murder_location = pygame.Rect(200, 400, 50, 50)
-wrong_solution = pygame.Rect(600, 400, 50, 50)  # Wrong solution
-
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Murder Mystery - Level {}".format(current_level))
-
+# Initialize screen
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Pygame Quest and Puzzle Game")
 clock = pygame.time.Clock()
-transition_start_time = 0
 
-def draw_transition_circle(radius):
-    pygame.draw.circle(screen, (255, 255, 255), (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), radius)
+# Game state
+current_level = 1
+inventory = []
 
-def game_over():
-    font = pygame.font.Font(None, 36)
-    text = font.render("Game Over - Correct Solution Clicked", True, (255, 0, 0))
-    text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
-    screen.blit(text, text_rect)
+# Define classes
+class InteractiveObject(pygame.sprite.Sprite):
+    def __init__(self, x, y, interaction_text, item=None):
+        super().__init__()
+        self.image = pygame.Surface((50, 50))
+        self.image.fill(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.interaction_text = interaction_text
+        self.item = item
+
+    def interact(self):
+        if self.item:
+            inventory.append(self.item)
+            show_interaction_text(f"You obtained: {self.item}")
+        else:
+            show_interaction_text(self.interaction_text)
+
+class Level:
+    def __init__(self, level_number):
+        self.level_number = level_number
+        self.objects = pygame.sprite.Group()
+
+    def setup_level(self):
+        # Clear existing objects
+        self.objects.empty()
+
+        # Add code to initialize the level (set up puzzles, objects, etc.)
+        if self.level_number == 1:
+            # Level 1 setup
+            obj1 = InteractiveObject(100, 100, "Click me for a key", item="Key")
+            obj2 = InteractiveObject(200, 200, "Click me for a clue", item="Clue")
+            obj3 = InteractiveObject(300, 300, "Click me for a puzzle piece", item="Puzzle Piece")
+
+            self.objects.add(obj1, obj2, obj3)
+        elif self.level_number == 2:
+            # Level 2 setup
+            obj4 = InteractiveObject(100, 100, "Click me for the next clue", item="Next Clue")
+            obj5 = InteractiveObject(200, 200, "Click me for a map", item="Map")
+            obj6 = InteractiveObject(300, 300, "Click me for a keycard", item="Keycard")
+
+            self.objects.add(obj4, obj5, obj6)
+        elif self.level_number == 3:
+            # Level 3 setup
+            obj7 = InteractiveObject(100, 100, "Click me for the final puzzle piece", item="Final Puzzle Piece")
+            obj8 = InteractiveObject(200, 200, "Click me for the exit key", item="Exit Key")
+            obj9 = InteractiveObject(300, 300, "Click me for the secret code", item="Secret Code")
+
+            self.objects.add(obj7, obj8, obj9)
+
+    def handle_interaction(self, current_level):
+        # Add code to handle interactions with objects in the level
+        for obj in self.objects:
+            if obj.rect.collidepoint(pygame.mouse.get_pos()):
+                obj.interact()
+                if current_level == 3 and len(inventory) == 3:
+                    show_right_solution_screen()
+                else:
+                    show_wrong_solution_screen()
+
+def show_interaction_text(text):
+    text_surface = FONT.render(text, True, WHITE)
+    text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT - 50))
+    screen.blit(text_surface, text_rect)
     pygame.display.flip()
-    pygame.time.delay(3000)  # Display the game over message for 3 seconds
-    pygame.quit()
-    sys.exit()
+    pygame.time.delay(2000)  # Display the text for 2 seconds
 
-def transition_to_next_level():
-    global current_level, SOLUTION_RECT, SOLUTION_COLOR
+def show_wrong_solution_screen():
+    screen.fill(BLACK)
+    wrong_text = FONT.render("Wrong Solution! Restarting Level...", True, WHITE)
+    screen.blit(wrong_text, (WIDTH // 2 - 200, HEIGHT // 2))
+    pygame.display.flip()
+    pygame.time.delay(3000)  # Display the wrong solution screen for 3 seconds
+    restart_level()
 
-    current_level += 1
-    if current_level <= MAX_LEVELS:
-        SOLUTION_RECT = generate_solution()
-        SOLUTION_COLOR = generate_solution_color()
-        pygame.display.set_caption("Murder Mystery - Level {}".format(current_level))
-    else:
-        print("You've completed all levels. Game Over!")
-        pygame.quit()
-        sys.exit()
+def show_right_solution_screen():
+    screen.fill(BLACK)
+    right_text = FONT.render("Congratulations! Proceeding to the Next Level...", True, WHITE)
+    screen.blit(right_text, (WIDTH // 2 - 250, HEIGHT // 2))
+    pygame.display.flip()
+    pygame.time.delay(3000)  # Display the right solution screen for 3 seconds
+    start_new_level()
 
-while current_level <= MAX_LEVELS:
+def draw_inventory():
+    inventory_surface = pygame.Surface((150, HEIGHT - 20))
+    inventory_surface.fill(WHITE)
+    screen.blit(inventory_surface, (10, 10))
+
+    inventory_text = FONT.render("Inventory", True, BLACK)
+    screen.blit(inventory_text, (20, 20))
+
+    for i, item in enumerate(inventory):
+        item_text = FONT.render(f"{i + 1}. {item}", True, BLACK)
+        screen.blit(item_text, (20, 60 + i * 30))
+
+# Set up groups
+all_sprites = pygame.sprite.Group()
+interactive_objects = pygame.sprite.Group()
+
+level = Level(current_level)
+
+# Game loop
+running = True
+while running:
+    # Events
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+            running = False
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            # Check for mouse clicks on interactive objects
+            level.handle_interaction(current_level)
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            mouse_x, mouse_y = pygame.mouse.get_pos()
+    # Update
+    all_sprites.update()
 
-            # Check if the player clicked on the correct or wrong solution
-            if SOLUTION_RECT.collidepoint(mouse_x, mouse_y):
-                game_over()
-            elif murder_location.collidepoint(mouse_x, mouse_y):
-                print("Congratulations! You found a clue in the murder mystery for Level {}".format(current_level))
-                transition_start_time = pygame.time.get_ticks()
+    # Draw / Render
+    screen.fill(BLACK)
 
-    screen.fill((255, 255, 255))
-    pygame.draw.rect(screen, SOLUTION_COLOR, SOLUTION_RECT)
+    # Draw inventory bar
+    draw_inventory()
 
-    # Draw murder mystery clues on Level 1
-    pygame.draw.rect(screen, (0, 0, 255), murder_location)
-    pygame.draw.rect(screen, (0, 255, 0), wrong_solution)  # Display the wrong solution
-
-    if transition_start_time > 0:
-        elapsed_time = pygame.time.get_ticks() - transition_start_time
-        if elapsed_time < transition_time:
-            alpha = 255 - int((elapsed_time / transition_time) * 255)
-            fade(screen, SCREEN_WIDTH, SCREEN_HEIGHT, alpha)
-        else:
-            transition_to_next_level()
-            transition_start_time = 0
-
+    all_sprites.draw(screen)
     pygame.display.flip()
-    clock.tick(60)
+
+    # Cap the frame rate
+    clock.tick(FPS)
+
+# Quit the game
+pygame.quit()
+sys.exit()
