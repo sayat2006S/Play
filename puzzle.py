@@ -87,11 +87,10 @@ class InteractiveObject(pygame.sprite.Sprite):
             if self.item == "Key":
                 # Check if the key is used to open the door
                 if self.locked_door and "Locked Door" in self.locked_door.item:
-                    level.objects.remove(self.locked_door)
-                    show_interaction_text("You unlocked the door with the key!")
-                    show_victory_screen()
-        else:
-            show_interaction_text(self.interaction_text)
+                    if self.locked_door.interact():  # Use the LockedDoor class's interact method
+                        show_interaction_text("You unlocked the door with the key!")
+            else:
+                show_interaction_text(self.interaction_text)
             
     def draw(self, screen):
         if self.is_door:
@@ -154,9 +153,10 @@ def show_victory_screen():
     victory_text = FONT.render("Victory! Click Next Level to proceed.", True, WHITE)
     screen.blit(victory_text, (WIDTH // 2 - 250, HEIGHT // 2 - 30))
 
-    pygame.draw.rect(screen, WHITE, next_level_button_rect)
-    next_level_text = FONT.render("Next Level", True, BLACK)
-    screen.blit(next_level_text, (WIDTH // 2 - 60, HEIGHT // 2 + 125))
+    if current_level < 3:  # Adjust the condition based on the number of levels
+        pygame.draw.rect(screen, WHITE, next_level_button_rect)
+        next_level_text = FONT.render("Next Level", True, BLACK)
+        screen.blit(next_level_text, (WIDTH // 2 - 60, HEIGHT // 2 + 125))
 
     pygame.draw.rect(screen, WHITE, restart_button_rect)
     restart_text = FONT.render("Restart Level", True, BLACK)
