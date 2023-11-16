@@ -8,6 +8,7 @@ pygame.init()
 WIDTH, HEIGHT = 800, 600
 FPS = 60
 WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
 BLACK = (0, 0, 0)
 FONT = pygame.font.Font(None, 36)
 
@@ -20,22 +21,46 @@ clock = pygame.time.Clock()
 current_level = 1
 inventory = []
 
+# New game state variables
+victory_screen = False
+restart_button_rect = pygame.Rect(650, 10, 150, 50)  # Move the restart button to the top-left corner
+next_level_button_rect = pygame.Rect(10, 10, 200, 50)
+
+# Interactive objects using Rect
+level_objects = [
+    {"rect": pygame.Rect(400, 400, 50, 50), "interaction_text": "Click me for a key", "item": "Key"},
+    {"rect": pygame.Rect(200, 200, 50, 50), "interaction_text": "Click me for a clue", "item": "Clue"},
+    {"rect": pygame.Rect(300, 300, 50, 50), "interaction_text": "Click me for a puzzle piece", "item": "Puzzle Piece"},
+    {"rect": pygame.Rect(500, 500, 50, 50), "interaction_text": "Click me for a locked door", "item": None}
+]
+
 # Define classes
 class InteractiveObject(pygame.sprite.Sprite):
-    def __init__(self, x, y, interaction_text, item=None):
+    def __init__(self, x, y, interaction_text, item=None, locked_door=None):
         super().__init__()
         self.image = pygame.Surface((50, 50))
         self.image.fill(WHITE)
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
+        self.rect = self.image.get_rect(topleft=(x, y))
         self.interaction_text = interaction_text
         self.item = item
+        self.locked_door = locked_door  # Reference to the locked door
 
     def interact(self):
         if self.item:
             inventory.append(self.item)
             show_interaction_text(f"You obtained: {self.item}")
+            if self.item == "Key":
+                # Check if the key is used to open the door
+                if self.locked_door and "Locked Door" in self.locked_door.item:
+                    level.objects.remove(self.locked_door)
+                    show_interaction_text("You unlocked the door with the key!")
+                    show_victory_screen()
+        elif self.interaction_text == "Click me for a locked door":
+            if "Key" in inventory:
+                show_interaction_text("You unlocked the door with the key!")
+                level.objects.remove(self.locked_door)
+            else:
+                show_interaction_text("The door is locked. Find a key!")
         else:
             show_interaction_text(self.interaction_text)
 
@@ -45,34 +70,33 @@ class Level:
         self.objects = pygame.sprite.Group()
 
     def setup_level(self):
-        # Clear existing objects
         self.objects.empty()
 
         # Add code to initialize the level (set up puzzles, objects, etc.)
         if self.level_number == 1:
-            # Level 1 setup
-            obj1 = InteractiveObject(100, 100, "Click me for a key", item="Key")
-            obj2 = InteractiveObject(200, 200, "Click me for a clue", item="Clue")
-            obj3 = InteractiveObject(300, 300, "Click me for a puzzle piece", item="Puzzle Piece")
-
-            self.objects.add(obj1, obj2, obj3)
+            locked_door = InteractiveObject(500, 500, "Click me for a locked door", item="Locked Door")
+            self.objects.add(
+                InteractiveObject(400, 400, "Click me for a key", item="Key", locked_door=locked_door),
+                InteractiveObject(200, 200, "Click me for a clue", item="Clue"),
+                InteractiveObject(300, 300, "Click me for a puzzle piece", item="Puzzle Piece"),
+                locked_door
+            )
         elif self.level_number == 2:
-            # Level 2 setup
-            obj4 = InteractiveObject(100, 100, "Click me for the next clue", item="Next Clue")
-            obj5 = InteractiveObject(200, 200, "Click me for a map", item="Map")
-            obj6 = InteractiveObject(300, 300, "Click me for a keycard", item="Keycard")
-
-            self.objects.add(obj4, obj5, obj6)
+            locked_door = InteractiveObject(500, 500, "Click me for a locked door", item="Locked Door")
+            self.objects.add(
+                InteractiveObject(100, 100, "Click me for the next clue", item="Next Clue"),
+                InteractiveObject(200, 200, "Click me for a map", item="Map"),
+                InteractiveObject(300, 300, "Click me for a keycard", item="Keycard")
+            )
         elif self.level_number == 3:
-            # Level 3 setup
-            obj7 = InteractiveObject(100, 100, "Click me for the final puzzle piece", item="Final Puzzle Piece")
-            obj8 = InteractiveObject(200, 200, "Click me for the exit key", item="Exit Key")
-            obj9 = InteractiveObject(300, 300, "Click me for the secret code", item="Secret Code")
-
-            self.objects.add(obj7, obj8, obj9)
+            locked_door = InteractiveObject(500, 500, "Click me for a locked door", item="Locked Door")
+            self.objects.add(
+                InteractiveObject(100, 100, "Click me for the final puzzle piece", item="Final Puzzle Piece"),
+                InteractiveObject(200, 200, "Click me for the exit key", item="Exit Key"),
+                InteractiveObject(300, 300, "Click me for the secret code", item="Secret Code")
+            )
 
     def handle_interaction(self, current_level):
-        # Add code to handle interactions with objects in the level
         for obj in self.objects:
             if obj.rect.collidepoint(pygame.mouse.get_pos()):
                 obj.interact()
@@ -86,7 +110,36 @@ def show_interaction_text(text):
     text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT - 50))
     screen.blit(text_surface, text_rect)
     pygame.display.flip()
-    pygame.time.delay(2000)  # Display the text for 2 seconds
+    pygame.time.delay(1000)  # Display the text for 2 seconds
+
+def show_victory_screen():
+    screen.fill(BLACK)
+    victory_text = FONT.render("Victory! Click Next Level to proceed.", True, WHITE)
+    screen.blit(victory_text, (WIDTH // 2 - 250, HEIGHT // 2 - 30))
+
+    pygame.draw.rect(screen, WHITE, next_level_button_rect)
+    next_level_text = FONT.render("Next Level", True, BLACK)
+    screen.blit(next_level_text, (WIDTH // 2 - 60, HEIGHT // 2 + 125))
+
+    pygame.draw.rect(screen, WHITE, restart_button_rect)
+    restart_text = FONT.render("Restart Level", True, BLACK)
+    screen.blit(restart_text, (WIDTH // 2 - 70, HEIGHT // 2 + 55))
+
+    pygame.display.flip()  # Update the display
+
+def start_new_level():
+    global current_level, inventory, victory_screen
+    current_level += 1
+    inventory = []
+    victory_screen = False
+    level.setup_level()
+
+def restart_level():
+    global current_level, inventory, victory_screen
+    current_level = 1
+    inventory = []
+    victory_screen = False
+    level.setup_level()
 
 def show_wrong_solution_screen():
     screen.fill(BLACK)
@@ -102,7 +155,16 @@ def show_right_solution_screen():
     screen.blit(right_text, (WIDTH // 2 - 250, HEIGHT // 2))
     pygame.display.flip()
     pygame.time.delay(3000)  # Display the right solution screen for 3 seconds
-    start_new_level()
+
+    # Logic for moving to the next level
+    current_level += 1
+    if current_level <= 3:
+        level.setup_level()
+        inventory = []
+        victory_screen = False
+    else:
+        # Game completed, you may add your completion logic here
+        pass
 
 def draw_inventory():
     inventory_surface = pygame.Surface((150, HEIGHT - 20))
@@ -121,31 +183,61 @@ all_sprites = pygame.sprite.Group()
 interactive_objects = pygame.sprite.Group()
 
 level = Level(current_level)
+level.setup_level()
 
 # Game loop
 running = True
 while running:
-    # Events
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            # Check for mouse clicks on interactive objects
-            level.handle_interaction(current_level)
+            if not victory_screen:
+                # Check for interactions with objects using Rect
+                for obj in level_objects:
+                    if obj["rect"].collidepoint(pygame.mouse.get_pos()):
+                        if obj["item"] is not None and obj["item"] not in inventory:
+                            # Handle interaction logic here
+                            inventory.append(obj["item"])
+                            show_interaction_text(f"You obtained: {obj['item']}")
+                        else:
+                            show_interaction_text(obj["interaction_text"])
 
-    # Update
+                        # Additional logic for specific objects
+                        if obj["item"] == "Locked Door":
+                            if "Key" in inventory:
+                                # Open the locked door if the player has the key
+                                show_victory_screen()
+                                # Additional logic for the locked door if needed
+                            else:
+                                show_interaction_text("The door is locked. Find a key!")
+
+                # Check for button clicks on the victory screen
+                if next_level_button_rect.collidepoint(pygame.mouse.get_pos()):
+                    start_new_level()
+                elif restart_button_rect.collidepoint(pygame.mouse.get_pos()):
+                    restart_level()
+                    
     all_sprites.update()
 
-    # Draw / Render
     screen.fill(BLACK)
-
-    # Draw inventory bar
     draw_inventory()
-
     all_sprites.draw(screen)
-    pygame.display.flip()
 
-    # Cap the frame rate
+    for obj in level.objects:
+        if obj.item == "Locked Door":
+            pygame.draw.rect(screen, (0, 0, 255), obj.rect)  # Draw the locked door in blue
+        else:
+            pygame.draw.rect(screen, WHITE, obj.rect)  # Draw other objects in white
+
+    pygame.draw.rect(screen, (255, 0, 0), restart_button_rect)
+    restart_text = FONT.render("Restart", True, WHITE)
+    screen.blit(restart_text, (restart_button_rect.x + 10, restart_button_rect.y + 10))
+
+    if victory_screen:
+        show_victory_screen()
+
+    pygame.display.flip()
     clock.tick(FPS)
 
 # Quit the game
