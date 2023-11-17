@@ -41,15 +41,18 @@ class Key(pygame.sprite.Sprite):
         self.image.fill((255, 255, 0))  # Yellow color for the key
         self.rect = self.image.get_rect(topleft=(x, y))
         self.item = item
+        self.visible = True  # Add a visible attribute
 
     def interact(self):
         if self.item in inventory:
             inventory.remove(self.item)
+            self.visible = False  # Set the visible attribute to False
             return True  # Key was used successfully
         return False  # Key was not used
 
     def draw(self, screen):
-        pygame.draw.rect(screen, (255, 255, 0), self.rect)  # Draw the key in yellow
+        if self.visible:  # Only draw if the key is visible
+            pygame.draw.rect(screen, (255, 255, 0), self.rect)  # Draw the key in yellow
         
 class LockedDoor(pygame.sprite.Sprite):
     def __init__(self, x, y, item="Locked Door"):
@@ -58,15 +61,21 @@ class LockedDoor(pygame.sprite.Sprite):
         self.image.fill((0, 0, 255))  # Blue color for the locked door
         self.rect = self.image.get_rect(topleft=(x, y))
         self.item = item
+        self.locked = True  # Initialize the door as locked
 
     def interact(self):
-        if "Key" in inventory:
+        if self.locked and "Key" in inventory:
             inventory.remove("Key")
+            self.locked = False  # Unlock the door
             return True  # Door was opened successfully
         return False  # Door was not opened
 
     def draw(self, screen):
-        pygame.draw.rect(screen, (0, 0, 255), self.rect)  # Draw the locked door in blue
+        if self.locked:
+            pygame.draw.rect(screen, (0, 0, 255), self.rect)  # Draw the locked door in blue
+        else:
+            # Draw the open door or any visual representation for an unlocked door
+            pygame.draw.rect(screen, (100, 100, 100), self.rect)
         
 # Define classes
 class InteractiveObject(pygame.sprite.Sprite):
@@ -79,39 +88,52 @@ class InteractiveObject(pygame.sprite.Sprite):
         self.item = item
         self.locked_door = locked_door  # Reference to the locked door
         self.is_door = is_door
+        self.visible = True
 
     def interact(self):
         if self.item:
             inventory.append(self.item)
             show_interaction_text(f"You obtained: {self.item}")
-            if self.item == "Key":
+            self.visible = False  # Set visibility to False when picked up
+
+            if self.item == "Key" and self.locked_door:
                 # Check if the key is used to open the door
-                if self.locked_door and "Locked Door" in self.locked_door.item:
-                    if self.locked_door.interact():  # Use the LockedDoor class's interact method
+                if "Locked Door" in self.locked_door.item:
+                    if self.locked_door.interact():
                         show_interaction_text("You unlocked the door with the key!")
-            else:
-                show_interaction_text(self.interaction_text)
-            
-    def draw(self, screen):
-        if self.is_door:
-            pygame.draw.rect(screen, (0, 0, 255), self.rect)  # Draw the locked door in blue
-            door_handle_rect = pygame.Rect(self.rect.x + 10, self.rect.y + 20, 10, 10)
-            pygame.draw.rect(screen, (255, 255, 0), door_handle_rect)  # Draw the door handle in yellow
+
+            elif self.item == "Locked Door":
+                # Remove the door from the level objects when picked up
+                level.objects.remove(self)
+
         else:
-            pygame.draw.rect(screen, WHITE, self.rect)  # Draw other objects in white
+            show_interaction_text(self.interaction_text)
+
+    def draw(self, screen):
+        if self.visible:
+            if self.is_door:
+                pygame.draw.rect(screen, (0, 0, 255), self.rect)
+                door_handle_rect = pygame.Rect(self.rect.x + 10, self.rect.y + 20, 10, 10)
+                pygame.draw.rect(screen, (255, 255, 0), door_handle_rect)
+            else:
+                pygame.draw.rect(screen, WHITE, self.rect)
 
 class Level:
     def __init__(self, level_number):
         self.level_number = level_number
         self.objects = pygame.sprite.Group()
+        self.inventory_objects = pygame.sprite.Group()  # New group for inventory objects
 
     def setup_level(self):
         self.objects.empty()
+        self.inventory_objects.empty()  # Clear the inventory objects group
 
         # Add code to initialize the level (set up puzzles, objects, etc.)
         if self.level_number == 1:
+            key = Key(400, 400)
+            self.objects.add(key)
+            self.inventory_objects.add(key)  # Add the key to the inventory objects group
             self.objects.add(
-                Key(400, 400),
                 InteractiveObject(200, 200, "Click me for a clue", item="Clue"),
                 InteractiveObject(300, 300, "Click me for a puzzle piece", item="Puzzle Piece"),
                 LockedDoor(500, 500)
@@ -268,13 +290,10 @@ while running:
     all_sprites.draw(screen)
 
     for obj in level.objects:
-        if obj.item == "Locked Door":
-            pygame.draw.rect(screen, (0, 0, 255), obj.rect)  # Draw the locked door in blue
-        else:
-            pygame.draw.rect(screen, WHITE, obj.rect)  # Draw other objects in white
-            
-    for obj in level.objects:
         obj.draw(screen)
+
+    for obj in level.inventory_objects:
+        obj.draw(screen)  # Draw inventory objects
 
     pygame.draw.rect(screen, (255, 0, 0), restart_button_rect)
     restart_text = FONT.render("Restart", True, WHITE)
