@@ -56,9 +56,7 @@ class InteractiveObject(pygame.sprite.Sprite):
                 self.visible = False
                 self.picked_up = True
                 if self.item == "Key":
-                    show_interaction_text("You unlocked a secret passage with the key!")
-            else:
-                show_interaction_text(self.interaction_text)
+                    show_interaction_text(self.interaction_text)
 
     def draw(self, screen):
         if self.visible:
@@ -81,7 +79,7 @@ class Level:
             self.objects.add(
                 InteractiveObject(200, 200, "Click me for a clue", item="Clue"),
                 InteractiveObject(300, 300, "Click me for a puzzle piece", item="Puzzle Piece"),
-                InteractiveObject(500, 500, "Click me for the secret passage key", item="Key")
+                InteractiveObject(600, 500, item="Key")
             )
         elif self.level_number == 2:
             self.objects.add(
@@ -106,9 +104,9 @@ class Level:
 class Key(pygame.sprite.Sprite):
     def __init__(self, x, y, item="Key"):
         super().__init__()
-        self.image = pygame.Surface((20, 20))
+        self.image = pygame.Surface((100, 200))
         self.image.fill((255, 255, 255))
-        self.rect = self.image.get_rect(topleft=(x, y))
+        self.rect = self.image.get_rect(topleft=(400, 100))
         self.item = item
         self.visible = True
         self.is_dragging = False
@@ -133,7 +131,7 @@ def show_interaction_text(text):
     text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT - 50))
     screen.blit(text_surface, text_rect)
     pygame.display.flip()
-    pygame.time.delay(2000)
+    pygame.time.delay(1000)
 
 def show_victory_screen():
     screen.fill(BLACK)
