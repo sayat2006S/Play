@@ -28,6 +28,8 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Pygame Quest and Puzzle Game")
 clock = pygame.time.Clock()
 
+level_completed = False
+
 # New game state variables
 restart_button_rect = pygame.Rect(10, 10, 150, 50)
 
@@ -74,23 +76,20 @@ class Level:
             key = Door(400, 400)
             self.inventory_objects.add(key)
             self.objects.add(
-                InteractiveObject(200, 200, "Click me for a clue", item="Clue"),
-                InteractiveObject(300, 300, "Click me for a puzzle piece", item="Puzzle Piece"),
                 InteractiveObject(600, 500, item="Key")
             )
         elif self.level_number == 2:
+            key = Door(400, 400)
+            self.inventory_objects.add(key)
             self.objects.add(
-                InteractiveObject(100, 100, "Click me for the next clue", item="Next Clue"),
-                InteractiveObject(200, 200, "Click me for a map", item="Map"),
-                InteractiveObject(300, 300, "Click me for a keycard", item="Keycard")
+                InteractiveObject(600, 500, item="Key")
             )
         elif self.level_number == 3:
+            key = Door(400, 400)
+            self.inventory_objects.add(key)
             self.objects.add(
-                InteractiveObject(100, 100, "Click me for the final puzzle piece", item="Final Puzzle Piece"),
-                InteractiveObject(200, 200, "Click me for the exit key", item="Exit Key"),
-                InteractiveObject(300, 300, "Click me for the secret code", item="Secret Code")
+                InteractiveObject(600, 500, item="Key")
             )
-
         if game_state.current_level == 1 and "Key" in game_state.inventory:
             for obj in self.objects:
                 if obj.item == "Locked Door":
@@ -133,6 +132,35 @@ def show_interaction_text(text):
     screen.blit(text_surface, text_rect)
     pygame.display.flip()
     pygame.time.delay(1000)
+    
+def show_level_completed_popup():
+    popup_rect = pygame.Rect(WIDTH // 4, HEIGHT // 4, WIDTH // 2, HEIGHT // 2)
+    pygame.draw.rect(screen, WHITE, popup_rect)
+
+    restart_button_rect = pygame.Rect(popup_rect.x + 50, popup_rect.y + 150, 150, 50)
+    next_level_button_rect = pygame.Rect(popup_rect.x + 250, popup_rect.y + 150, 150, 50)
+
+    pygame.draw.rect(screen, (255, 0, 0), restart_button_rect)
+    pygame.draw.rect(screen, (0, 255, 0), next_level_button_rect)
+
+    restart_text = FONT.render("Restart", True, WHITE)
+    next_level_text = FONT.render("Next Level", True, WHITE)
+
+    screen.blit(restart_text, (restart_button_rect.x + 10, restart_button_rect.y + 10))
+    screen.blit(next_level_text, (next_level_button_rect.x + 10, next_level_button_rect.y + 10))
+
+    pygame.display.flip()
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if restart_button_rect.collidepoint(pygame.mouse.get_pos()):
+                    return "restart"
+                elif next_level_button_rect.collidepoint(pygame.mouse.get_pos()):
+                    return "next_level"
 
 # Set up groups
 all_sprites = pygame.sprite.Group()
@@ -149,18 +177,19 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
-                for obj in level.objects:
-                    if isinstance(obj, InteractiveObject) and obj.rect.collidepoint(pygame.mouse.get_pos()):
-                        obj.interact()
-                for key in level.inventory_objects:
-                    if isinstance(key, Door) and key.rect.collidepoint(pygame.mouse.get_pos()):
-                        key.is_dragging = True
-                        dragging_key = key
+            for obj in level.objects:
+                if isinstance(obj, InteractiveObject) and obj.rect.collidepoint(pygame.mouse.get_pos()):
+                    obj.interact()
+            for key in level.inventory_objects:
+                if isinstance(key, Door) and key.rect.collidepoint(pygame.mouse.get_pos()):
+                    key.is_dragging = True
+                    dragging_key = key
         elif event.type == pygame.MOUSEBUTTONUP:
             if dragging_key:
                 dragging_key.is_dragging = False
-                dragging_key.interact()
-                dragging_key = None
+                if dragging_key.interact() and all(obj.picked_up for obj in level.objects if
+                                                   isinstance(obj, InteractiveObject) and obj.item == "Key"):
+                    level_completed = True
 
     all_sprites.update()
 
@@ -173,7 +202,8 @@ while running:
 
     for i, item in enumerate(game_state.inventory):
         item_text = FONT.render(f"{i + 1}. {item}", True, BLACK)
-        item_rect = item_text.get_rect(topleft=(mini_inventory_rect.x + 10, mini_inventory_rect.y + 40 + i * 30))
+        item_rect = item_text.get_rect(
+            topleft=(mini_inventory_rect.x + 10, mini_inventory_rect.y + 40 + i * 30))
         screen.blit(item_text, item_rect)
 
     all_sprites.draw(screen)
@@ -187,6 +217,19 @@ while running:
     pygame.draw.rect(screen, (255, 0, 0), restart_button_rect)
     restart_text = FONT.render("Restart", True, WHITE)
     screen.blit(restart_text, (restart_button_rect.x + 10, restart_button_rect.y + 10))
+
+    if level_completed:
+        action = show_level_completed_popup()
+        if action == "restart":
+            game_state = GameState()
+            level = Level(game_state.current_level)
+            level.setup_level()
+            level_completed = False
+        elif action == "next_level":
+            game_state.current_level += 1
+            level = Level(game_state.current_level)
+            level.setup_level()
+            level_completed = False
 
     pygame.display.flip()
     clock.tick(FPS)
