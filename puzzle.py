@@ -28,14 +28,6 @@ next_level_button_rect = pygame.Rect(10, 70, 200, 50)
 # Mini inventory tab
 mini_inventory_rect = pygame.Rect(10, 150, 150, HEIGHT - 170)
 
-# Interactive objects using Rect
-level_objects = [
-    {"rect": pygame.Rect(400, 400, 50, 50), "interaction_text": "Click me for a key", "item": "Key"},
-    {"rect": pygame.Rect(200, 200, 50, 50), "interaction_text": "Click me for a clue", "item": "Clue"},
-    {"rect": pygame.Rect(300, 300, 50, 50), "interaction_text": "Click me for a puzzle piece", "item": "Puzzle Piece"},
-    {"rect": pygame.Rect(500, 500, 50, 50), "interaction_text": "Click me for a locked door", "item": None}
-]
-
 class Key(pygame.sprite.Sprite):
     def __init__(self, x, y, item="Key"):
         super().__init__()
@@ -44,6 +36,7 @@ class Key(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=(x, y))
         self.item = item
         self.visible = True
+        self.is_dragging = False  # New attribute to track if the key is being dragged
 
     def interact(self):
         if self.item in inventory:
@@ -55,6 +48,10 @@ class Key(pygame.sprite.Sprite):
     def draw(self, screen):
         if self.visible:
             pygame.draw.rect(screen, (255, 255, 0), self.rect)
+
+    def update(self):
+        if self.is_dragging:
+            self.rect.center = pygame.mouse.get_pos()
 
 class LockedDoor(pygame.sprite.Sprite):
     def __init__(self, x, y, item="Locked Door"):
@@ -129,13 +126,16 @@ class Level:
 
         if self.level_number == 1:
             key = Key(400, 400)
-            self.objects.add(key)
-            self.inventory_objects.add(key)
+            self.inventory_objects.add(key)  # Add the key only to the inventory_objects group
             self.objects.add(
                 InteractiveObject(200, 200, "Click me for a clue", item="Clue"),
                 InteractiveObject(300, 300, "Click me for a puzzle piece", item="Puzzle Piece"),
                 LockedDoor(500, 500)
             )
+
+            # Add debug print statements to check if the key is being added to the inventory
+            if key in self.inventory_objects:
+                print("KEY PICKED UP")
         elif self.level_number == 2:
             self.objects.add(
                 InteractiveObject(100, 100, "Click me for the next clue", item="Next Clue"),
@@ -206,6 +206,7 @@ level.setup_level()
 
 # Game loop
 running = True
+dragging_key = None  # Variable to keep track of the key being dragged
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -215,6 +216,15 @@ while running:
                 for obj in level.objects:
                     if isinstance(obj, InteractiveObject) and obj.rect.collidepoint(pygame.mouse.get_pos()):
                         obj.interact()
+                for key in level.inventory_objects:
+                    if isinstance(key, Key) and key.rect.collidepoint(pygame.mouse.get_pos()):
+                        key.is_dragging = True
+                        dragging_key = key
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if dragging_key:
+                dragging_key.is_dragging = False
+                dragging_key.interact()  # Check for interaction when the key is released
+                dragging_key = None
 
     all_sprites.update()
 
