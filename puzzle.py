@@ -1,3 +1,7 @@
+#добав текстуры
+#чо делать когда все уровни прошел
+#рестат фигня
+#чо то ещё делать, хз
 import pygame
 import sys
 
@@ -79,16 +83,16 @@ class Level:
                 InteractiveObject(600, 500, item="Key")
             )
         elif self.level_number == 2:
-            key = Door(400, 400)
+            key = Door(600, 500)
             self.inventory_objects.add(key)
             self.objects.add(
-                InteractiveObject(600, 500, item="Key")
+                InteractiveObject(500, 400, item="Key")
             )
         elif self.level_number == 3:
-            key = Door(400, 400)
+            key = Door(500, 400)
             self.inventory_objects.add(key)
             self.objects.add(
-                InteractiveObject(600, 500, item="Key")
+                InteractiveObject(300, 200, item="Key")
             )
         if game_state.current_level == 1 and "Key" in game_state.inventory:
             for obj in self.objects:
