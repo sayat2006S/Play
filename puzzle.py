@@ -89,22 +89,24 @@ class InteractiveObject(pygame.sprite.Sprite):
         self.locked_door = locked_door
         self.is_door = is_door
         self.visible = True
+        self.picked_up = False  # New attribute to track if the object has been picked up
 
     def interact(self):
-        if self.item:
-            inventory.append(self.item)
-            show_interaction_text(f"You obtained: {self.item}")
-            self.visible = False
+        if not self.picked_up:  # Check if the object has not been picked up
+            if self.item:
+                inventory.append(self.item)
+                show_interaction_text(f"You obtained: {self.item}")
+                self.visible = False
+                self.picked_up = True  # Set picked_up to True after picking up the item
 
-            if self.item == "Key" and self.locked_door:
-                if "Locked Door" in self.locked_door.item:
-                    if self.locked_door.interact():
-                        show_interaction_text("You unlocked the door with the key!")
-            elif self.item == "Locked Door":
-                level.objects.remove(self)
-
-        else:
-            show_interaction_text(self.interaction_text)
+                if self.item == "Key" and self.locked_door:
+                    if "Locked Door" in self.locked_door.item:
+                        if self.locked_door.interact():
+                            show_interaction_text("You unlocked the door with the key!")
+                elif self.item == "Locked Door":
+                    level.objects.remove(self)
+            else:
+                show_interaction_text(self.interaction_text)
 
     def draw(self, screen):
         if self.visible:
