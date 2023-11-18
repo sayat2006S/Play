@@ -13,10 +13,8 @@ FPS = 60
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
-# Initialize font
 FONT = pygame.font.Font(None, 36)
 
-# Game state
 class GameState:
     def __init__(self):
         self.current_level = 1
@@ -24,20 +22,16 @@ class GameState:
 
 game_state = GameState()
 
-# Initialize Pygame
 pygame.init()
 
-# Initialize screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Pygame Quest and Puzzle Game")
 clock = pygame.time.Clock()
 
 level_completed = False
 
-# New game state variables
 restart_button_rect = pygame.Rect(10, 10, 150, 50)
 
-# Mini inventory tab
 mini_inventory_rect = pygame.Rect(10, 150, 150, HEIGHT - 170)
 
 class InteractiveObject(pygame.sprite.Sprite):
@@ -77,22 +71,25 @@ class Level:
         self.inventory_objects.empty()
 
         if self.level_number == 1:
-            key = Door(400, 400)
+            key_item = "Key1"
+            key = Door(400, 400, item=key_item)
             self.inventory_objects.add(key)
             self.objects.add(
-                InteractiveObject(600, 500, item="Key")
+                InteractiveObject(600, 500, item=key_item)
             )
         elif self.level_number == 2:
-            key = Door(600, 500)
+            key_item = "Key2"
+            key = Door(200, 500, item=key_item)
             self.inventory_objects.add(key)
             self.objects.add(
-                InteractiveObject(500, 400, item="Key")
+                InteractiveObject(600, 500, item=key_item)
             )
         elif self.level_number == 3:
-            key = Door(500, 400)
+            key_item = "Key3"
+            key = Door(600, 300, item=key_item)
             self.inventory_objects.add(key)
             self.objects.add(
-                InteractiveObject(300, 200, item="Key")
+                InteractiveObject(600, 500, item=key_item)
             )
         if game_state.current_level == 1 and "Key" in game_state.inventory:
             for obj in self.objects:
@@ -115,7 +112,6 @@ class Door(pygame.sprite.Sprite):
             game_state.inventory.remove(self.item)
             self.visible = False
 
-            # Check for victory condition
             if all(obj.picked_up for obj in level.objects if isinstance(obj, InteractiveObject) and obj.item == "Key"):
                 show_interaction_text("You completed the level!")
 
@@ -166,14 +162,12 @@ def show_level_completed_popup():
                 elif next_level_button_rect.collidepoint(pygame.mouse.get_pos()):
                     return "next_level"
 
-# Set up groups
 all_sprites = pygame.sprite.Group()
 interactive_objects = pygame.sprite.Group()
 
 level = Level(game_state.current_level)
 level.setup_level()
 
-# Game loop
 running = True
 dragging_key = None
 while running:
@@ -199,7 +193,6 @@ while running:
 
     screen.fill(BLACK)
 
-    # Draw mini inventory tab
     pygame.draw.rect(screen, WHITE, mini_inventory_rect)
     mini_inventory_text = FONT.render("Inventory", True, BLACK)
     screen.blit(mini_inventory_text, (mini_inventory_rect.x + 10, mini_inventory_rect.y + 10))
