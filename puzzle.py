@@ -19,6 +19,7 @@ class GameState:
     def __init__(self):
         self.current_level = 1
         self.inventory = []
+        self.all_levels_completed = False
 
 game_state = GameState()
 
@@ -134,6 +135,11 @@ def show_interaction_text(text):
     pygame.time.delay(1000)
     
 def show_level_completed_popup():
+    if game_state.current_level > max_levels:  # Add the maximum level variable (e.g., max_levels = 3)
+        show_interaction_text("Congratulations! You completed all levels!")
+        game_state.all_levels_completed = True
+        return "quit"  # Add an option to quit after completing all levels
+
     popup_rect = pygame.Rect(WIDTH // 4, HEIGHT // 4, WIDTH // 2, HEIGHT // 2)
     pygame.draw.rect(screen, WHITE, popup_rect)
 
@@ -161,12 +167,27 @@ def show_level_completed_popup():
                     return "restart"
                 elif next_level_button_rect.collidepoint(pygame.mouse.get_pos()):
                     return "next_level"
+                
+def show_victory_screen():
+    screen.fill(BLACK)  # Change the background color if needed
+
+    victory_text = FONT.render("Congratulations! You completed all levels!", True, WHITE)
+    text_rect = victory_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    screen.blit(victory_text, text_rect)
+
+    pygame.display.flip()
+
+    pygame.time.delay(3000) 
+
+    return "quit" 
 
 all_sprites = pygame.sprite.Group()
 interactive_objects = pygame.sprite.Group()
 
 level = Level(game_state.current_level)
 level.setup_level()
+
+max_levels = 4 
 
 running = True
 dragging_key = None
@@ -188,6 +209,12 @@ while running:
                 if dragging_key.interact() and all(obj.picked_up for obj in level.objects if
                                                    isinstance(obj, InteractiveObject) and obj.item == "Key"):
                     level_completed = True
+                    
+    if game_state.current_level == max_levels and all(obj.picked_up for obj in level.objects if
+                                                       isinstance(obj, InteractiveObject) and obj.item == "Key"):
+        action = show_victory_screen()
+        if action == "quit":
+            running = False
 
     all_sprites.update()
 
