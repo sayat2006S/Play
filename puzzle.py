@@ -23,13 +23,9 @@ class GameState:
 
 game_state = GameState()
 
-pygame.init()
-
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Pygame Quest and Puzzle Game")
 clock = pygame.time.Clock()
-
-level_completed = False
 
 restart_button_rect = pygame.Rect(10, 10, 150, 50)
 
@@ -66,6 +62,7 @@ class Level:
         self.level_number = level_number
         self.objects = pygame.sprite.Group()
         self.inventory_objects = pygame.sprite.Group()
+        self.lock_screen = CombinationLockScreen(None)
 
     def setup_level(self):
         self.objects.empty()
@@ -79,12 +76,9 @@ class Level:
                 InteractiveObject(600, 500, item=key_item)
             )
         elif self.level_number == 2:
-            key_item = "Key2"
-            key = Door(200, 500, item=key_item)
-            self.inventory_objects.add(key)
-            self.objects.add(
-                InteractiveObject(600, 500, item=key_item)
-            )
+            combination_lock = CombinationLock(400, 400, combination="1234")
+            self.objects.add(combination_lock)
+            self.lock_screen.combination_lock = combination_lock
         elif self.level_number == 3:
             key_item = "Key3"
             key = Door(600, 300, item=key_item)
@@ -126,6 +120,84 @@ class Door(pygame.sprite.Sprite):
     def update(self):
         if self.is_dragging:
             self.rect.center = pygame.mouse.get_pos()
+            
+class CombinationLock(pygame.sprite.Sprite):
+    def __init__(self, x, y, combination="1234"):
+        super().__init__()
+        self.image = pygame.Surface((100, 100))
+        self.image.fill((0, 255, 0))  # Color of the lock
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.combination = combination
+        self.input_combination = ""
+        self.locked = True
+
+    def interact(self, digit):
+        if self.locked:
+            self.input_combination += str(digit)
+
+            if len(self.input_combination) == len(self.combination):
+                if self.input_combination == self.combination:
+                    self.unlock_door()
+                    show_interaction_text("Door unlocked!")  # Show the correct interaction text
+                    return True  # Indicate that the interaction was successful
+
+                self.input_combination = ""
+                
+        return False  # Indicate that the interaction was unsuccessful
+
+    def unlock_door(self):
+        self.locked = False
+        show_interaction_text("Door unlocked!")
+
+        # Check if all required objects are picked up to complete the level
+        if all(obj.picked_up for obj in level.objects if isinstance(obj, InteractiveObject) and obj.item == "Key"):
+            global level_completed  # Declare level_completed as global
+            level_completed = True
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, (0, 255, 0), self.rect)
+        
+class CombinationLockScreen:
+    def __init__(self, combination_lock):
+        self.combination_lock = combination_lock
+        self.input_combination = ""
+        self.is_open = False
+        self.popup_rect = pygame.Rect(WIDTH // 4, HEIGHT // 4, WIDTH // 2, HEIGHT // 2)
+        self.close_button_rect = pygame.Rect(self.popup_rect.x + self.popup_rect.width - 30,
+                                             self.popup_rect.y, 30, 30)
+
+    def open_lock_screen(self):
+        self.is_open = True
+        self.input_combination = ""
+
+    def close_lock_screen(self):
+        self.is_open = False
+
+    def input_digit(self, digit):
+        if self.is_open:
+            self.input_combination += str(digit)
+
+            if len(self.input_combination) == len(self.combination_lock.combination):
+                if self.input_combination == self.combination_lock.combination:
+                    self.combination_lock.unlock_door()
+                else:
+                    self.close_lock_screen()
+                    show_interaction_text("Incorrect combination. Lock screen closed.")
+
+    def draw(self, screen):
+        if self.is_open:
+            pygame.draw.rect(screen, WHITE, self.popup_rect)
+
+            pygame.draw.rect(screen, (255, 0, 0), self.close_button_rect)
+            close_text = FONT.render("X", True, BLACK)
+            screen.blit(close_text, (self.close_button_rect.x + 10, self.close_button_rect.y + 5))
+
+            input_text = FONT.render("Enter Combination:", True, BLACK)
+            screen.blit(input_text, (self.popup_rect.x + 20, self.popup_rect.y + 20))
+
+            combination_text = FONT.render(self.input_combination, True, BLACK)
+            combination_rect = combination_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            screen.blit(combination_text, combination_rect)
 
 def show_interaction_text(text):
     text_surface = FONT.render(text, True, WHITE)
@@ -191,6 +263,7 @@ max_levels = 4
 
 running = True
 dragging_key = None
+level_completed = False
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -203,6 +276,23 @@ while running:
                 if isinstance(key, Door) and key.rect.collidepoint(pygame.mouse.get_pos()):
                     key.is_dragging = True
                     dragging_key = key
+            for lock in level.objects:
+                if isinstance(lock, CombinationLock) and lock.rect.collidepoint(pygame.mouse.get_pos()):
+                    level.lock_screen.open_lock_screen()
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if dragging_key:
+                dragging_key.is_dragging = False
+                if dragging_key.interact() and all(obj.picked_up for obj in level.objects if
+                                   isinstance(obj, InteractiveObject) and obj.item == "Key"):
+                    level_completed = True
+            level.lock_screen.close_lock_screen()
+        elif event.type == pygame.KEYDOWN:
+            if level.lock_screen.is_open:
+                if event.key in (pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5,
+                                 pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9):
+                    level.lock_screen.input_digit(int(pygame.key.name(event.key)))
+                elif event.key == pygame.K_BACKSPACE:
+                    level.lock_screen.input_combination = level.lock_screen.input_combination[:-1]
         elif event.type == pygame.MOUSEBUTTONUP:
             if dragging_key:
                 dragging_key.is_dragging = False
@@ -219,6 +309,8 @@ while running:
     all_sprites.update()
 
     screen.fill(BLACK)
+    
+    level.lock_screen.draw(screen)
 
     pygame.draw.rect(screen, WHITE, mini_inventory_rect)
     mini_inventory_text = FONT.render("Inventory", True, BLACK)
