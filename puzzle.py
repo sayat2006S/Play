@@ -86,6 +86,8 @@ class Level:
             self.objects.add(
                 InteractiveObject(600, 500, item=key_item)
             )
+            puzzle = PuzzleObject(200, 400)
+            self.objects.add(puzzle)
         if game_state.current_level == 1 and "Key" in game_state.inventory:
             for obj in self.objects:
                 if obj.item == "Locked Door":
@@ -198,6 +200,31 @@ class CombinationLockScreen:
             combination_text = FONT.render(self.input_combination, True, BLACK)
             combination_rect = combination_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
             screen.blit(combination_text, combination_rect)
+            
+class PuzzleObject(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((100, 100))
+        self.image.fill((0, 0, 255))  # Color of the puzzle object
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.click_count = 0  # Keep track of the number of clicks
+        self.max_clicks = 10  # Number of clicks required to complete the puzzle
+        self.completed = False  # Indicates if the puzzle is completed
+
+    def interact(self):
+        if not self.completed:
+            self.click_count += 1
+
+            if self.click_count == self.max_clicks:
+                self.completed = True
+                show_interaction_text("Puzzle completed! You can now proceed.")
+                global level_completed  # Declare level_completed as global
+                level_completed = True
+            else:
+                remaining_clicks = self.max_clicks - self.click_count
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, (0, 0, 255), self.rect)
 
 def show_interaction_text(text):
     text_surface = FONT.render(text, True, WHITE)
@@ -279,6 +306,9 @@ while running:
             for lock in level.objects:
                 if isinstance(lock, CombinationLock) and lock.rect.collidepoint(pygame.mouse.get_pos()):
                     level.lock_screen.open_lock_screen()
+            for puzzle in level.objects:
+                if isinstance(puzzle, PuzzleObject) and puzzle.rect.collidepoint(pygame.mouse.get_pos()):
+                    puzzle.interact()
         elif event.type == pygame.MOUSEBUTTONUP:
             if dragging_key:
                 dragging_key.is_dragging = False
