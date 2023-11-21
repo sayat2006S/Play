@@ -72,20 +72,16 @@ class Level:
             key_item = "Key1"
             key = Door(400, 400, item=key_item)
             self.inventory_objects.add(key)
+            plank = SlidingPlank(200, 400)
+            self.objects.add(plank)
             self.objects.add(
-                InteractiveObject(600, 500, item=key_item)
+                InteractiveObject(250, 400, item=key_item)
             )
         elif self.level_number == 2:
             combination_lock = CombinationLock(400, 400, combination="1234")
             self.objects.add(combination_lock)
             self.lock_screen.combination_lock = combination_lock
         elif self.level_number == 3:
-            key_item = "Key3"
-            key = Door(600, 300, item=key_item)
-            self.inventory_objects.add(key)
-            self.objects.add(
-                InteractiveObject(600, 500, item=key_item)
-            )
             puzzle = PuzzleObject(200, 400)
             self.objects.add(puzzle)
         if game_state.current_level == 1 and "Key" in game_state.inventory:
@@ -231,6 +227,32 @@ class PuzzleObject(pygame.sprite.Sprite):
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.colors[self.image_index], self.rect)
+        
+class SlidingPlank(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((120, 50))
+        self.image.fill((139, 69, 19))  # Brown color for the plank
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.visible = True
+        self.is_sliding = False
+        self.starting_x = x
+        self.sliding_distance = 100  # Adjust the sliding distance as needed
+
+    def interact(self):
+        if not self.is_sliding:
+            self.is_sliding = True
+
+    def draw(self, screen):
+        if self.visible:
+            pygame.draw.rect(screen, (139, 69, 19), self.rect)
+
+    def update(self):
+        if self.is_sliding:
+            self.rect.x += 5  # Adjust the sliding speed as needed
+            if self.rect.x - self.starting_x >= self.sliding_distance:
+                self.is_sliding = False
+                self.rect.x = self.starting_x + self.sliding_distance  # Set position to the end of sliding distance
 
 def show_interaction_text(text):
     text_surface = FONT.render(text, True, WHITE)
@@ -248,14 +270,14 @@ def show_level_completed_popup():
     popup_rect = pygame.Rect(WIDTH // 4, HEIGHT // 4, WIDTH // 2, HEIGHT // 2)
     pygame.draw.rect(screen, WHITE, popup_rect)
 
-    restart_button_rect = pygame.Rect(popup_rect.x + 50, popup_rect.y + 150, 150, 50)
-    next_level_button_rect = pygame.Rect(popup_rect.x + 250, popup_rect.y + 150, 150, 50)
+    restart_button_rect = pygame.Rect(popup_rect.x + 50, popup_rect.y + 150, 100, 50)
+    next_level_button_rect = pygame.Rect(popup_rect.x + 250, popup_rect.y + 150, 100, 50)
 
     pygame.draw.rect(screen, (255, 0, 0), restart_button_rect)
     pygame.draw.rect(screen, (0, 255, 0), next_level_button_rect)
 
     restart_text = FONT.render("Restart", True, WHITE)
-    next_level_text = FONT.render("Next Level", True, WHITE)
+    next_level_text = FONT.render("Next", True, WHITE)
 
     screen.blit(restart_text, (restart_button_rect.x + 10, restart_button_rect.y + 10))
     screen.blit(next_level_text, (next_level_button_rect.x + 10, next_level_button_rect.y + 10))
@@ -292,10 +314,14 @@ interactive_objects = pygame.sprite.Group()
 level = Level(game_state.current_level)
 level.setup_level()
 
+sliding_plank = SlidingPlank(200, 400)
+level.objects.add(sliding_plank)
+
 max_levels = 4 
 
 running = True
 dragging_key = None
+sliding_plank_clicked = False
 level_completed = False
 while running:
     for event in pygame.event.get():
@@ -315,6 +341,10 @@ while running:
             for puzzle in level.objects:
                 if isinstance(puzzle, PuzzleObject) and puzzle.rect.collidepoint(pygame.mouse.get_pos()):
                     puzzle.interact()
+            for plank in level.objects:
+                if isinstance(plank, SlidingPlank) and plank.rect.collidepoint(pygame.mouse.get_pos()):
+                    plank.interact()
+                    sliding_plank_clicked = True
         elif event.type == pygame.MOUSEBUTTONUP:
             if dragging_key:
                 dragging_key.is_dragging = False
@@ -362,6 +392,7 @@ while running:
 
     for obj in level.objects:
         obj.draw(screen)
+        obj.update()
 
     for obj in level.inventory_objects:
         obj.draw(screen)
@@ -369,6 +400,12 @@ while running:
     pygame.draw.rect(screen, (255, 0, 0), restart_button_rect)
     restart_text = FONT.render("Restart", True, WHITE)
     screen.blit(restart_text, (restart_button_rect.x + 10, restart_button_rect.y + 10))
+    
+    if sliding_plank_clicked:
+        # Check if the sliding plank has reached its sliding distance
+        if sliding_plank.rect.x - sliding_plank.starting_x >= sliding_plank.sliding_distance:
+            sliding_plank_clicked = False
+            # Perform additional actions here if needed
 
     if level_completed:
         action = show_level_completed_popup()
