@@ -204,27 +204,33 @@ class CombinationLockScreen:
 class PuzzleObject(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
+        self.colors = [(255, 0, 0), (255, 165, 0), (255, 255, 0), (0, 128, 0), (0, 0, 255)]  # Different colors for each click
+        self.image_index = 0
         self.image = pygame.Surface((100, 100))
-        self.image.fill((0, 0, 255))  # Color of the puzzle object
+        self.image.fill(self.colors[self.image_index])
         self.rect = self.image.get_rect(topleft=(x, y))
-        self.click_count = 0  # Keep track of the number of clicks
-        self.max_clicks = 10  # Number of clicks required to complete the puzzle
-        self.completed = False  # Indicates if the puzzle is completed
+        self.click_count = 0
+        self.max_clicks = len(self.colors)
+        self.completed = False
 
     def interact(self):
         if not self.completed:
             self.click_count += 1
 
-            if self.click_count == self.max_clicks:
+            if self.click_count < self.max_clicks:
+                self.image_index = self.click_count
+                self.image.fill(self.colors[self.image_index])
+                '''show_interaction_text(f"Clicked {self.click_count} times on the puzzle.")'''
+            elif self.click_count == self.max_clicks:
                 self.completed = True
                 show_interaction_text("Puzzle completed! You can now proceed.")
                 global level_completed  # Declare level_completed as global
                 level_completed = True
             else:
-                remaining_clicks = self.max_clicks - self.click_count
+                show_interaction_text("Puzzle already completed.")
 
     def draw(self, screen):
-        pygame.draw.rect(screen, (0, 0, 255), self.rect)
+        pygame.draw.rect(screen, self.colors[self.image_index], self.rect)
 
 def show_interaction_text(text):
     text_surface = FONT.render(text, True, WHITE)
