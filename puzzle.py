@@ -12,7 +12,6 @@ WIDTH, HEIGHT = 800, 600
 FPS = 60
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-
 FONT = pygame.font.Font(None, 36)
 
 class GameState:
@@ -26,10 +25,7 @@ game_state = GameState()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Pygame Quest and Puzzle Game")
 clock = pygame.time.Clock()
-
-restart_button_rect = pygame.Rect(10, 10, 150, 50)
-
-mini_inventory_rect = pygame.Rect(10, 150, 150, HEIGHT - 170)
+mini_inventory_rect = pygame.Rect(10, 50, 130, 200)
 
 class InteractiveObject(pygame.sprite.Sprite):
     def __init__(self, x, y, interaction_text="", item=None):
@@ -41,7 +37,6 @@ class InteractiveObject(pygame.sprite.Sprite):
         self.item = item
         self.visible = True
         self.picked_up = False
-
     def interact(self):
         if not self.picked_up:
             if self.item:
@@ -51,7 +46,6 @@ class InteractiveObject(pygame.sprite.Sprite):
                 self.picked_up = True
                 if self.item == "Key":
                     show_interaction_text(self.interaction_text)
-
     def draw(self, screen):
         if self.visible:
             if self.item:
@@ -89,6 +83,11 @@ class Level:
         elif self.level_number == 3:
             puzzle = PuzzleObject(200, 400)
             self.objects.add(puzzle)
+            text_display = TextDisplayObject(250, 200, "Break through my frame, discover the key, Am I just art, or a passage set free?")
+            level.objects.add(text_display)
+            interactive_objects.add(text_display)
+            plank = SlidingPlank(500, 450)
+            self.objects.add(plank)
         if game_state.current_level == 1 and "Key" in game_state.inventory:
             for obj in self.objects:
                 if obj.item == "Locked Door":
@@ -278,6 +277,26 @@ class Note(pygame.sprite.Sprite):
         note_text = self.font.render(f"Code: {self.combination_lock.combination}", True, (0, 0, 0))  # Black text
         text_rect = note_text.get_rect(center=(self.rect.centerx, self.rect.centery))
         screen.blit(note_text, text_rect)
+        
+class TextDisplayObject(pygame.sprite.Sprite):
+    def __init__(self, x, y, text):
+        super().__init__()
+        self.image = pygame.Surface((400, 50))
+        self.image.fill((0, 150, 0))  # Cyan color for the text-displaying object
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.text = text
+        self.font_size = 18  # Adjust the font size as needed
+
+    def interact(self):
+        show_interaction_text(self.text)
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, (0, 160, 0), self.rect)
+
+        font = pygame.font.Font(None, self.font_size)
+        text_surface = font.render(self.text, True, (50, 200, 50))  # Black text
+        text_rect = text_surface.get_rect(center=self.rect.center)
+        screen.blit(text_surface, text_rect)
 
 def show_interaction_text(text):
     text_surface = FONT.render(text, True, WHITE)
@@ -400,8 +419,6 @@ while running:
     all_sprites.update()
 
     screen.fill(BLACK)
-    
-    level.lock_screen.draw(screen)
 
     pygame.draw.rect(screen, WHITE, mini_inventory_rect)
     mini_inventory_text = FONT.render("Inventory", True, BLACK)
@@ -421,10 +438,6 @@ while running:
 
     for obj in level.inventory_objects:
         obj.draw(screen)
-
-    pygame.draw.rect(screen, (255, 0, 0), restart_button_rect)
-    restart_text = FONT.render("Restart", True, WHITE)
-    screen.blit(restart_text, (restart_button_rect.x + 10, restart_button_rect.y + 10))
     
     if sliding_plank_clicked:
         # Check if the sliding plank has reached its sliding distance
@@ -444,6 +457,8 @@ while running:
             level = Level(game_state.current_level)
             level.setup_level()
             level_completed = False
+
+    level.lock_screen.draw(screen)
 
     pygame.display.flip()
     clock.tick(FPS)
