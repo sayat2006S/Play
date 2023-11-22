@@ -311,8 +311,8 @@ def show_level_completed_popup():
     pygame.draw.rect(screen, (255, 0, 0), restart_button_rect)
     pygame.draw.rect(screen, (0, 255, 0), next_level_button_rect)
 
-    restart_text = FONT.render("Рестарт", True, WHITE)
-    next_level_text = FONT.render("Дальше", True, WHITE)
+    restart_text = FONT.render("Restart", True, WHITE)
+    next_level_text = FONT.render("Next", True, WHITE)
 
     screen.blit(restart_text, (restart_button_rect.x + 10, restart_button_rect.y + 10))
     screen.blit(next_level_text, (next_level_button_rect.x + 10, next_level_button_rect.y + 10))
@@ -412,7 +412,7 @@ while running:
     screen.blit(background_image, (0, 0))  
 
     pygame.draw.rect(screen, WHITE, mini_inventory_rect)
-    mini_inventory_text = FONT.render("Инвентарь", True, BLACK)
+    mini_inventory_text = FONT.render("Inventory", True, BLACK)
     screen.blit(mini_inventory_text, (mini_inventory_rect.x + 10, mini_inventory_rect.y + 10))
 
     for i, item in enumerate(game_state.inventory):
