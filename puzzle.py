@@ -81,6 +81,11 @@ class Level:
             combination_lock = CombinationLock(400, 400, combination="1234")
             self.objects.add(combination_lock)
             self.lock_screen.combination_lock = combination_lock
+            note = Note(250, 250, combination_lock)
+            self.objects.add(note)
+            self.lock_screen.combination_lock = combination_lock
+            plank = SlidingPlank(250, 250)
+            self.objects.add(plank)
         elif self.level_number == 3:
             puzzle = PuzzleObject(200, 400)
             self.objects.add(puzzle)
@@ -253,6 +258,26 @@ class SlidingPlank(pygame.sprite.Sprite):
             if self.rect.x - self.starting_x >= self.sliding_distance:
                 self.is_sliding = False
                 self.rect.x = self.starting_x + self.sliding_distance  # Set position to the end of sliding distance
+                
+class Note(pygame.sprite.Sprite):
+    def __init__(self, x, y, combination_lock):
+        super().__init__()
+        self.image = pygame.Surface((100, 50))  # Adjust the size of the note
+        self.image.fill((255, 255, 255))  # White color for the note
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.combination_lock = combination_lock
+        self.font = pygame.font.Font(None, 24)  # Adjust the font size as needed
+
+    def interact(self):
+        show_interaction_text(f"Note: Combination Lock Code - {self.combination_lock.combination}")
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, (255, 255, 255), self.rect)
+        
+        # Display the combination lock code on the note
+        note_text = self.font.render(f"Code: {self.combination_lock.combination}", True, (0, 0, 0))  # Black text
+        text_rect = note_text.get_rect(center=(self.rect.centerx, self.rect.centery))
+        screen.blit(note_text, text_rect)
 
 def show_interaction_text(text):
     text_surface = FONT.render(text, True, WHITE)
