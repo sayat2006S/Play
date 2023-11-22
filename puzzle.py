@@ -81,10 +81,10 @@ class Level:
             combination_lock = CombinationLock(400, 400, combination="1234")
             self.objects.add(combination_lock)
             self.lock_screen.combination_lock = combination_lock
-            note = Note(250, 250, combination_lock)
+            note = Note(650, 250, combination_lock)
             self.objects.add(note)
             self.lock_screen.combination_lock = combination_lock
-            plank = SlidingPlank(250, 250)
+            plank = SlidingPlank(650, 250)
             self.objects.add(plank)
         elif self.level_number == 3:
             puzzle = PuzzleObject(200, 400)
