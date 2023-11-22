@@ -218,7 +218,7 @@ class PuzzleObject(pygame.sprite.Sprite):
                 '''show_interaction_text(f"Clicked {self.click_count} times on the puzzle.")'''
             elif self.click_count == self.max_clicks:
                 self.completed = True
-                show_interaction_text("Открыт проход.")
+                show_interaction_text("Открыт проход, сзади :)")
                 global level_completed  
                 level_completed = True
 
