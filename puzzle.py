@@ -10,6 +10,13 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 FONT = pygame.font.Font(None, 36)
 
+door_texture = pygame.image.load("door_texture.png")  # Replace with the actual file path
+key_texture = pygame.image.load("key_texture.png")
+lock_texture = pygame.image.load("lock_texture.png")
+
+background_image = pygame.image.load("room-2.jpg")  # Replace with the actual file path
+background_image = pygame.transform.scale(background_image, (WIDTH, HEIGHT))
+
 class GameState:
     def __init__(self):
         self.current_level = 1
@@ -21,13 +28,14 @@ game_state = GameState()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Pygame Quest and Puzzle Game")
 clock = pygame.time.Clock()
+screen.blit(background_image, (0, 0))
 mini_inventory_rect = pygame.Rect(10, 50, 130, 200)
 
 class InteractiveObject(pygame.sprite.Sprite):
     def __init__(self, x, y, interaction_text="", item=None):
         super().__init__()
-        self.image = pygame.Surface((50, 50))
-        self.image.fill(WHITE)
+        texture = key_texture if item else pygame.image.load("default_texture.png").convert_alpha()
+        self.image = pygame.transform.scale(texture, (50, 50))
         self.rect = self.image.get_rect(topleft=(x, y))
         self.interaction_text = interaction_text
         self.item = item
@@ -44,8 +52,7 @@ class InteractiveObject(pygame.sprite.Sprite):
                     show_interaction_text(self.interaction_text)
     def draw(self, screen):
         if self.visible:
-            if self.item:
-                pygame.draw.rect(screen, WHITE, self.rect)
+            screen.blit(self.image, self.rect.topleft)
 
 class Level:
     def __init__(self, level_number):
@@ -60,12 +67,10 @@ class Level:
 
         if self.level_number == 1:
             key_item = "Key1"
-            key = Door(400, 400, item=key_item)
+            key = Door(300, 145, item=key_item)
             self.inventory_objects.add(key)
-            plank = SlidingPlank(200, 400)
-            self.objects.add(plank)
             self.objects.add(
-                InteractiveObject(250, 400, item=key_item)
+                InteractiveObject(150, 500, item=key_item)
             )
         elif self.level_number == 2:
             combination_lock = CombinationLock(400, 400, combination="1234")
@@ -82,8 +87,6 @@ class Level:
             text_display = TextDisplayObject(250, 200, "Break through my frame, discover the key, Am I just art, or a passage set free?")
             level.objects.add(text_display)
             interactive_objects.add(text_display)
-            plank = SlidingPlank(500, 450)
-            self.objects.add(plank)
         if game_state.current_level == 1 and "Key" in game_state.inventory:
             for obj in self.objects:
                 if obj.item == "Locked Door":
@@ -93,9 +96,8 @@ class Level:
 class Door(pygame.sprite.Sprite):
     def __init__(self, x, y, item="Key"):
         super().__init__()
-        self.image = pygame.Surface((100, 200))
-        self.image.fill((255, 255, 255))
-        self.rect = self.image.get_rect(topleft=(400, 100))
+        self.image = pygame.transform.scale(pygame.image.load("door_texture.png").convert_alpha(), (220, 300))
+        self.rect = self.image.get_rect(topleft=(x, y))
         self.item = item
         self.visible = True
         self.is_dragging = False
@@ -113,7 +115,7 @@ class Door(pygame.sprite.Sprite):
 
     def draw(self, screen):
         if self.visible:
-            pygame.draw.rect(screen, (255, 255, 0), self.rect)
+            screen.blit(self.image, self.rect.topleft)
 
     def update(self):
         if self.is_dragging:
@@ -122,8 +124,7 @@ class Door(pygame.sprite.Sprite):
 class CombinationLock(pygame.sprite.Sprite):
     def __init__(self, x, y, combination="1234"):
         super().__init__()
-        self.image = pygame.Surface((100, 100))
-        self.image.fill((0, 255, 0))  # Color of the lock
+        self.image = pygame.transform.scale(pygame.image.load("lock_texture.png").convert_alpha(), (100, 100))
         self.rect = self.image.get_rect(topleft=(x, y))
         self.combination = combination
         self.input_combination = ""
@@ -153,7 +154,7 @@ class CombinationLock(pygame.sprite.Sprite):
             level_completed = True
 
     def draw(self, screen):
-        pygame.draw.rect(screen, (0, 255, 0), self.rect)
+        screen.blit(self.image, self.rect.topleft)
         
 class CombinationLockScreen:
     def __init__(self, combination_lock):
@@ -414,7 +415,7 @@ while running:
 
     all_sprites.update()
 
-    screen.fill(BLACK)
+    screen.blit(background_image, (0, 0))  # Draw the background image
 
     pygame.draw.rect(screen, WHITE, mini_inventory_rect)
     mini_inventory_text = FONT.render("Inventory", True, BLACK)
